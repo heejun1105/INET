@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>장비 목록</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <h2>장비 목록</h2>
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <form th:action="@{/device/list}" method="get" class="d-flex">
+                    <select name="schoolId" class="form-select me-2" onchange="this.form.submit()">
+                        <option value="">전체 학교</option>
+                        <option th:each="school : ${schools}" 
+                                th:value="${school.schoolId}"
+                                th:text="${school.schoolName}"
+                                th:selected="${param.schoolId != null and param.schoolId[0] == school.schoolId.toString()}">
+                        </option>
+                    </select>
+                </form>
+            </div>
+            <div class="col-md-6 text-end">
+                <a href="/device/register" class="btn btn-primary">장비 등록</a>
+            </div>
+        </div>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>관리번호</th>
+                    <th>유형</th>
+                    <th>제조사</th>
+                    <th>모델명</th>
+                    <th>구매일자</th>
+                    <th>IP주소</th>
+                    <th>위치</th>
+                    <th>용도</th>
+                    <th>세트분류</th>
+                    <th>학교</th>
+                    <th>담당자</th>
+                    <th>직위</th>
+                    <th>불용</th>
+                    <th>비고</th>
+                    <th>관리</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="device : ${devices}">
+                    <td th:text="${device.manageNo != null ? device.manageNo : ''}"></td>
+                    <td th:text="${device.type != null ? device.type : ''}"></td>
+                    <td th:text="${device.manufacturer != null ? device.manufacturer : ''}"></td>
+                    <td th:text="${device.modelName != null ? device.modelName : ''}"></td>
+                    <td th:text="${device.purchaseDate != null ? device.purchaseDate : ''}"></td>
+                    <td th:text="${device.ipAddress != null ? device.ipAddress : ''}"></td>
+                    <td th:text="${device.location != null ? device.location : ''}"></td>
+                    <td th:text="${device.purpose != null ? device.purpose : ''}"></td>
+                    <td th:text="${device.setType != null ? device.setType : ''}"></td>
+                    <td th:text="${device.school != null and device.school.schoolName != null ? device.school.schoolName : ''}"></td>
+                    <td th:text="${device.operator != null and device.operator.name != null ? device.operator.name : ''}"></td>
+                    <td th:text="${device.operator != null and device.operator.position != null ? device.operator.position : ''}"></td>
+                    <td th:text="${device.unused != null and device.unused ? '예' : '아니오'}"></td>
+                    <td th:text="${device.note != null ? device.note : ''}"></td>
+                    <td>
+                        <a th:href="@{/device/modify/{id}(id=${device.deviceId})}" class="btn btn-sm btn-warning">수정</a>
+                        <form th:action="@{/device/remove}" method="post" style="display: inline;">
+                            <input type="hidden" name="device_id" th:value="${device.deviceId}">
+                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('정말 삭제하시겠습니까?')">삭제</button>
+                        </form>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 

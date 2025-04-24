@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>장비 수정</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <h2>장비 수정</h2>
+        <form th:action="@{/device/modify}" method="post" th:object="${device}">
+            <input type="hidden" th:field="*{deviceId}">
+            <div class="mb-3">
+                <label for="manageNo" class="form-label">관리번호</label>
+                <input type="text" class="form-control" id="manageNo" th:field="*{manageNo}">
+            </div>
+            <div class="mb-3">
+                <label for="type" class="form-label">유형</label>
+                <input type="text" class="form-control" id="type" th:field="*{type}" required>
+            </div>
+            <div class="mb-3">
+                <label for="manufacturer" class="form-label">제조사</label>
+                <input type="text" class="form-control" id="manufacturer" th:field="*{manufacturer}">
+            </div>
+            <div class="mb-3">
+                <label for="modelName" class="form-label">모델명</label>
+                <input type="text" class="form-control" id="modelName" th:field="*{modelName}">
+            </div>
+            <div class="mb-3">
+                <label for="purchaseDate" class="form-label">구매일자</label>
+                <input type="date" class="form-control" id="purchaseDate" th:field="*{purchaseDate}">
+            </div>
+            <div class="mb-3">
+                <label for="ipAddress" class="form-label">IP주소</label>
+                <input type="text" class="form-control" id="ipAddress" th:field="*{ipAddress}">
+            </div>
+            <div class="mb-3">
+                <label for="location" class="form-label">위치</label>
+                <input type="text" class="form-control" id="location" th:field="*{location}">
+            </div>
+            <div class="mb-3">
+                <label for="purpose" class="form-label">용도</label>
+                <input type="text" class="form-control" id="purpose" th:field="*{purpose}">
+            </div>
+            <div class="mb-3">
+                <label for="setType" class="form-label">세트분류</label>
+                <input type="text" class="form-control" id="setType" th:field="*{setType}">
+            </div>
+            <div class="mb-3">
+                <label for="school" class="form-label">학교</label>
+                <select class="form-select" id="school" th:field="*{school}" required>
+                    <option value="">학교 선택</option>
+                    <option th:each="school : ${schools}" 
+                            th:value="${school.schoolId}" 
+                            th:text="${school.schoolName}"></option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="operator_name" class="form-label">담당자</label>
+                <input type="text" class="form-control" id="operator_name" name="operator_name" 
+                       th:value="${device.operator != null ? device.operator.name : ''}" >
+            </div>
+            <div class="mb-3">
+                <label for="operator_position" class="form-label">직위</label>
+                <input type="text" class="form-control" id="operator_position" name="operator_position" 
+                       th:value="${device.operator != null ? device.operator.position : ''}" >
+            </div>
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="unused" th:field="*{unused}">
+                <label class="form-check-label" for="unused">불용</label>
+            </div>
+            <div class="mb-3">
+                <label for="note" class="form-label">비고</label>
+                <textarea class="form-control" id="note" th:field="*{note}" rows="3"></textarea>
+            </div>
+            <div class="mb-3">
+                <button type="submit" class="btn btn-primary">수정</button>
+                <a href="/device/list" class="btn btn-secondary">목록</a>
+            </div>
+        </form>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 

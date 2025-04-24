@@ -1,0 +1,59 @@
+package com.inet.entity;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Column;
+import lombok.Data;
+import java.time.LocalDate;
+
+@Entity
+@Table(name = "device")
+@Data
+public class Device {
+    
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "device_id")
+    private Long deviceId;
+    
+    @Column(name = "manage_no")
+    private String manageNo;
+    
+    private String type;
+    
+    private String manufacturer;
+    
+    @Column(name = "model_name")
+    private String modelName;
+    
+    @Column(name = "purchase_date")
+    private LocalDate purchaseDate;
+    
+    @Column(name = "ip_address")
+    private String ipAddress;
+    
+    private String location;
+    
+    private String purpose;
+    
+    @Column(name = "set_type")
+    private String setType;
+    
+    private Boolean unused = false;
+    
+    @Column(columnDefinition = "TEXT")
+    private String note;
+    
+    @ManyToOne
+    @JoinColumn(name = "school_id")
+    private School school;
+    
+    @ManyToOne
+    @JoinColumn(name = "operator_id")
+    private Operator operator;
+} 
