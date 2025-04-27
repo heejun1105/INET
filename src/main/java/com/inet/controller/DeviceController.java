@@ -5,6 +5,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import com.inet.entity.Device;
 import com.inet.entity.Operator;
+import com.inet.entity.School;
 import com.inet.service.DeviceService;
 import com.inet.service.SchoolService;
 import com.inet.service.OperatorService;
@@ -44,10 +45,14 @@ public class DeviceController {
     public String register(Device device, String operatorName, String operatorPosition) {
         log.info("Registering device: {}", device);
         
+        // 학교 정보 가져오기
+        School school = device.getSchool();
+        
         // 담당자 정보 저장
         Operator operator = new Operator();
         operator.setName(operatorName);
         operator.setPosition(operatorPosition);
+        operator.setSchool(school); // 학교 정보 설정
         operatorService.saveOperator(operator);
         
         // 장비에 담당자 정보 연결
@@ -68,16 +73,21 @@ public class DeviceController {
     public String modify(Device device, String operatorName, String operatorPosition) {
         log.info("Modifying device: {}", device);
         
+        // 학교 정보 가져오기
+        School school = device.getSchool();
+        
         // 담당자 정보 업데이트
         Operator operator = device.getOperator();
         if (operator != null) {
             operator.setName(operatorName);
             operator.setPosition(operatorPosition);
+            operator.setSchool(school); // 학교 정보 업데이트
             operatorService.updateOperator(operator);
         } else {
             operator = new Operator();
             operator.setName(operatorName);
             operator.setPosition(operatorPosition);
+            operator.setSchool(school); // 학교 정보 설정
             operatorService.saveOperator(operator);
             device.setOperator(operator);
         }

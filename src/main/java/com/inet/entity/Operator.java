@@ -6,6 +6,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Column;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.JoinColumn;
 import lombok.Data;
 
 @Entity
@@ -21,4 +23,8 @@ public class Operator {
     private String name;
     
     private String position;
+    
+    @ManyToOne
+    @JoinColumn(name = "school_id")
+    private School school;
 } 
