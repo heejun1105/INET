@@ -9,6 +9,9 @@ import com.inet.entity.School;
 import com.inet.service.DeviceService;
 import com.inet.service.SchoolService;
 import com.inet.service.OperatorService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -24,13 +27,22 @@ public class DeviceController {
     private final OperatorService operatorService;
 
     @GetMapping("/list")
-    public String list(@RequestParam(required = false) Long schoolId, Model model) {
+    public String list(
+            @RequestParam(required = false) Long schoolId,
+            @RequestParam(required = false) String type,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            Model model) {
         model.addAttribute("schools", schoolService.getAllSchools());
-        if (schoolId != null) {
-            model.addAttribute("devices", deviceService.getDevicesBySchoolId(schoolId));
-        } else {
-            model.addAttribute("devices", deviceService.getAllDevices());
-        }
+        model.addAttribute("types", deviceService.getAllTypes());
+        model.addAttribute("selectedSchoolId", schoolId);
+        model.addAttribute("selectedType", type);
+
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Device> devicePage = deviceService.getDevices(schoolId, type, pageable);
+        model.addAttribute("devicePage", devicePage);
+        model.addAttribute("currentPage", page);
+        model.addAttribute("pageSize", size);
         return "device/list";
     }
 
