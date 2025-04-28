@@ -1,88 +1,142 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
     <title>장비 수정</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/device.css" />
 </head>
 <body>
-    <div class="container mt-5 device-form-container">
-        <div class="device-title">
-            <h2>장비 수정</h2>
-            <div class="device-subtitle">장비 정보를 수정해 주세요.</div>
+    <div class="container">
+        <div class="device-form-container">
+            <div class="title">
+                <div class="subject">장비 수정</div>
+                <div class="subtitle">장비 정보를 수정해 주세요.</div>
+            </div>
+            <div class="main">
+                <form th:action="@{/device/modify}" method="post" th:object="${device}">
+                    <table class="sign_table">
+                        <tr>
+                            <td class="need">관리번호</td>
+                        </tr>
+                        <tr>
+                            <td><input type="text" th:field="*{manageNo}"></td>
+                        </tr>
+
+                        <tr>
+                            <td class="need">유형</td>
+                        </tr>
+                        <tr>
+                            <td><input type="text" th:field="*{type}" required></td>
+                        </tr>
+
+                        <tr>
+                            <td>제조사</td>
+                        </tr>
+                        <tr>
+                            <td><input type="text" th:field="*{manufacturer}"></td>
+                        </tr>
+
+                        <tr>
+                            <td>모델명</td>
+                        </tr>
+                        <tr>
+                            <td><input type="text" th:field="*{modelName}"></td>
+                        </tr>
+
+                        <tr>
+                            <td>구매일자</td>
+                        </tr>
+                        <tr>
+                            <td><input type="date" th:field="*{purchaseDate}"></td>
+                        </tr>
+
+                        <tr>
+                            <td>IP주소</td>
+                        </tr>
+                        <tr>
+                            <td><input type="text" th:field="*{ipAddress}"></td>
+                        </tr>
+
+                        <tr>
+                            <td class="need">위치</td>
+                        </tr>
+                        <tr>
+                            <td><input type="text" th:field="*{location}"></td>
+                        </tr>
+
+                        <tr>
+                            <td>용도</td>
+                        </tr>
+                        <tr>
+                            <td><input type="text" th:field="*{purpose}"></td>
+                        </tr>
+
+                        <tr>
+                            <td>세트분류</td>
+                        </tr>
+                        <tr>
+                            <td><input type="text" th:field="*{setType}"></td>
+                        </tr>
+
+                        <tr>
+                            <td class="need">학교</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <select th:field="*{school}" required>
+                                    <option value="">학교 선택</option>
+                                    <option th:each="school : ${schools}" 
+                                            th:value="${school.schoolId}" 
+                                            th:text="${school.schoolName}"></option>
+                                </select>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td>담당자</td>
+                        </tr>
+                        <tr>
+                            <td><input type="text" name="operator_name" 
+                                   th:value="${device.operator != null ? device.operator.name : ''}"></td>
+                        </tr>
+
+                        <tr>
+                            <td>직위</td>
+                        </tr>
+                        <tr>
+                            <td><input type="text" name="operator_position" 
+                                   th:value="${device.operator != null ? device.operator.position : ''}"></td>
+                        </tr>
+
+                        <tr>
+                            <td>불용</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="gender">
+                                    <label><input type="checkbox" th:field="*{unused}">불용</label>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td>비고</td>
+                        </tr>
+                        <tr>
+                            <td><textarea th:field="*{note}" rows="3"></textarea></td>
+                        </tr>
+
+                        <tr>
+                            <td></td>
+                        </tr>
+                    </table>
+                    <div class="but">
+                        <button type="submit" class="sub-but">수정</button>
+                        <a href="/device/list" class="sub-but" style="background-color: #6c757d; margin-left: 10px;">목록</a>
+                    </div>
+                </form>
+            </div>
         </div>
-        <form th:action="@{/device/modify}" method="post" th:object="${device}">
-            <input type="hidden" th:field="*{deviceId}">
-            <div class="mb-3">
-                <label for="manageNo" class="form-label">관리번호</label>
-                <input type="text" class="form-control" id="manageNo" th:field="*{manageNo}">
-            </div>
-            <div class="mb-3">
-                <label for="type" class="form-label">유형</label>
-                <input type="text" class="form-control" id="type" th:field="*{type}" required>
-            </div>
-            <div class="mb-3">
-                <label for="manufacturer" class="form-label">제조사</label>
-                <input type="text" class="form-control" id="manufacturer" th:field="*{manufacturer}">
-            </div>
-            <div class="mb-3">
-                <label for="modelName" class="form-label">모델명</label>
-                <input type="text" class="form-control" id="modelName" th:field="*{modelName}">
-            </div>
-            <div class="mb-3">
-                <label for="purchaseDate" class="form-label">구매일자</label>
-                <input type="date" class="form-control" id="purchaseDate" th:field="*{purchaseDate}">
-            </div>
-            <div class="mb-3">
-                <label for="ipAddress" class="form-label">IP주소</label>
-                <input type="text" class="form-control" id="ipAddress" th:field="*{ipAddress}">
-            </div>
-            <div class="mb-3">
-                <label for="location" class="form-label">위치</label>
-                <input type="text" class="form-control" id="location" th:field="*{location}">
-            </div>
-            <div class="mb-3">
-                <label for="purpose" class="form-label">용도</label>
-                <input type="text" class="form-control" id="purpose" th:field="*{purpose}">
-            </div>
-            <div class="mb-3">
-                <label for="setType" class="form-label">세트분류</label>
-                <input type="text" class="form-control" id="setType" th:field="*{setType}">
-            </div>
-            <div class="mb-3">
-                <label for="school" class="form-label">학교</label>
-                <select class="form-select" id="school" th:field="*{school}" required>
-                    <option value="">학교 선택</option>
-                    <option th:each="school : ${schools}" 
-                            th:value="${school.schoolId}" 
-                            th:text="${school.schoolName}"></option>
-                </select>
-            </div>
-            <div class="mb-3">
-                <label for="operator_name" class="form-label">담당자</label>
-                <input type="text" class="form-control" id="operator_name" name="operator_name" 
-                       th:value="${device.operator != null ? device.operator.name : ''}" >
-            </div>
-            <div class="mb-3">
-                <label for="operator_position" class="form-label">직위</label>
-                <input type="text" class="form-control" id="operator_position" name="operator_position" 
-                       th:value="${device.operator != null ? device.operator.position : ''}" >
-            </div>
-            <div class="mb-3 form-check">
-                <input type="checkbox" class="form-check-input" id="unused" th:field="*{unused}">
-                <label class="form-check-label" for="unused">불용</label>
-            </div>
-            <div class="mb-3">
-                <label for="note" class="form-label">비고</label>
-                <textarea class="form-control" id="note" th:field="*{note}" rows="3"></textarea>
-            </div>
-            <div class="mb-3">
-                <button type="submit" class="btn btn-primary">수정</button>
-                <a href="/device/list" class="btn btn-secondary">목록</a>
-            </div>
-        </form>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html> 

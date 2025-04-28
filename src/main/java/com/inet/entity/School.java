@@ -22,4 +22,40 @@ public class School {
     private String schoolName;
     
     private Integer ip;
+
+    public Long getSchoolId() {
+        return schoolId;
+    }
+
+    public void setSchoolId(Long schoolId) {
+        this.schoolId = schoolId;
+    }
+
+    public String getSchoolName() {
+        return schoolName;
+    }
+
+    public void setSchoolName(String schoolName) {
+        this.schoolName = schoolName;
+    }
+
+    public Integer getIp() {
+        return ip;
+    }
+
+    public void setIp(Integer ip) {
+        this.ip = ip;
+    }
+
+    public void setName(String name) {
+        this.schoolName = name;
+    }
+
+    public void setAddress(String address) {
+        // This field is not present in the entity
+    }
+
+    public void setPhone(String phone) {
+        // This field is not present in the entity
+    }
 } 

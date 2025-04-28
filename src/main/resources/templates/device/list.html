@@ -1,106 +1,103 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
     <title>장비 목록</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/device.css" />
 </head>
 <body>
-    <div class="container mt-5 device-form-container">
-        <div class="device-title">
-            <h2>장비 목록</h2>
-            <div class="device-subtitle">학교별, 유형별로 장비를 관리하세요!</div>
-        </div>
-        <div class="row mb-3">
-            <div class="col-md-8">
-                <form th:action="@{/device/list}" method="get" class="d-flex align-items-center">
-                    <select name="schoolId" class="form-select me-2" onchange="this.form.submit()">
-                        <option value="">전체 학교</option>
-                        <option th:each="school : ${schools}" 
-                                th:value="${school.schoolId}"
-                                th:text="${school.schoolName}"
-                                th:selected="${selectedSchoolId} == ${school.schoolId}">
-                        </option>
-                    </select>
-                    <select name="type" class="form-select me-2" onchange="this.form.submit()">
-                        <option value="">전체 유형</option>
-                        <option th:each="t : ${types}"
-                                th:value="${t}"
-                                th:text="${t}"
-                                th:selected="${selectedType} == ${t}">
-                        </option>
-                    </select>
-                    <input type="hidden" name="page" th:value="${currentPage}" />
-                    <input type="hidden" name="size" th:value="${pageSize}" />
-                </form>
+    <div class="container">
+        <div class="device-list-container">
+            <div class="title">
+                <div class="subject">장비 목록</div>
+                <div class="subtitle">학교별, 유형별로 장비를 관리하세요!</div>
             </div>
-            <div class="col-md-4 text-end">
-                <a href="/device/register" class="btn btn-primary">장비 등록</a>
+            <div class="main">
+                <div class="filter-container">
+                    <form th:action="@{/device/list}" method="get" class="d-flex align-items-center">
+                        <select name="schoolId" onchange="this.form.submit()">
+                            <option value="">전체 학교</option>
+                            <option th:each="school : ${schools}" 
+                                    th:value="${school.schoolId}"
+                                    th:text="${school.schoolName}"
+                                    th:selected="${selectedSchoolId} == ${school.schoolId}">
+                            </option>
+                        </select>
+                        <select name="type" onchange="this.form.submit()">
+                            <option value="">전체 유형</option>
+                            <option th:each="t : ${types}"
+                                    th:value="${t}"
+                                    th:text="${t}"
+                                    th:selected="${selectedType} == ${t}">
+                            </option>
+                        </select>
+                        <input type="hidden" name="page" th:value="${currentPage}" />
+                        <input type="hidden" name="size" th:value="${pageSize}" />
+                    </form>
+                    <a href="/device/register" class="sub-but" style="margin-left: auto;">장비 등록</a>
+                    <a th:href="@{/device/excel(schoolId=${selectedSchoolId}, type=${selectedType})}" class="btn btn-success">엑셀 다운로드</a>
+                </div>
+                <table class="device-table">
+                    <thead>
+                        <tr>
+                            <th>관리번호</th>
+                            <th>유형</th>
+                            <th>제조사</th>
+                            <th>모델명</th>
+                            <th>구매일자</th>
+                            <th>IP주소</th>
+                            <th>위치</th>
+                            <th>용도</th>
+                            <th>세트분류</th>
+                            <th>학교</th>
+                            <th>담당자</th>
+                            <th>직위</th>
+                            <th>불용</th>
+                            <th>비고</th>
+                            <th>관리</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="device : ${devicePage.content}">
+                            <td th:text="${device.manageNo != null and device.manageNo != 'NaN' ? device.manageNo : ''}"></td>
+                            <td th:text="${device.type != null and device.type != 'NaN' ? device.type : ''}"></td>
+                            <td th:text="${device.manufacturer != null and device.manufacturer != 'NaN' ? device.manufacturer : ''}"></td>
+                            <td th:text="${device.modelName != null and device.modelName != 'NaN' ? device.modelName : ''}"></td>
+                            <td th:text="${device.purchaseDate != null and device.purchaseDate != 'NaN' ? device.purchaseDate : ''}"></td>
+                            <td th:text="${device.ipAddress != null and device.ipAddress != 'NaN' ? device.ipAddress : ''}"></td>
+                            <td th:text="${device.location != null and device.location != 'NaN' ? device.location : ''}"></td>
+                            <td th:text="${device.purpose != null and device.purpose != 'NaN' ? device.purpose : ''}"></td>
+                            <td th:text="${device.setType != null and device.setType != 'NaN' ? device.setType : ''}"></td>
+                            <td th:text="${device.school != null and device.school.schoolName != null and device.school.schoolName != 'NaN' ? device.school.schoolName : ''}"></td>
+                            <td th:text="${device.operator != null and device.operator.name != null and device.operator.name != 'NaN' ? device.operator.name : ''}"></td>
+                            <td th:text="${device.operator != null and device.operator.position != null and device.operator.position != 'NaN' ? device.operator.position : ''}"></td>
+                            <td th:text="${device.unused != null and device.unused ? '예' : '아니오'}"></td>
+                            <td th:text="${device.note != null and device.note != 'NaN' ? device.note : ''}"></td>
+                            <td>
+                                <div class="action-buttons">
+                                    <a th:href="@{/device/modify/{id}(id=${device.deviceId})}" class="btn-warning">수정</a>
+                                    <form th:action="@{/device/remove}" method="post" style="display: inline;">
+                                        <input type="hidden" name="device_id" th:value="${device.deviceId}">
+                                        <button type="submit" class="btn-danger" onclick="return confirm('정말 삭제하시겠습니까?')">삭제</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <!-- 페이징 네비게이션 -->
+                <nav th:if="${devicePage.totalPages > 1}" class="pagination">
+                    <a th:href="@{/device/list(schoolId=${selectedSchoolId}, type=${selectedType}, page=${devicePage.number - 1}, size=${pageSize})}" 
+                       th:classappend="${devicePage.first} ? 'disabled'">이전</a>
+                    <a th:each="i : ${#numbers.sequence(0, devicePage.totalPages - 1)}"
+                       th:href="@{/device/list(schoolId=${selectedSchoolId}, type=${selectedType}, page=${i}, size=${pageSize})}"
+                       th:text="${i + 1}"
+                       th:classappend="${devicePage.number == i} ? 'active'"></a>
+                    <a th:href="@{/device/list(schoolId=${selectedSchoolId}, type=${selectedType}, page=${devicePage.number + 1}, size=${pageSize})}"
+                       th:classappend="${devicePage.last} ? 'disabled'">다음</a>
+                </nav>
             </div>
         </div>
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>관리번호</th>
-                    <th>유형</th>
-                    <th>제조사</th>
-                    <th>모델명</th>
-                    <th>구매일자</th>
-                    <th>IP주소</th>
-                    <th>위치</th>
-                    <th>용도</th>
-                    <th>세트분류</th>
-                    <th>학교</th>
-                    <th>담당자</th>
-                    <th>직위</th>
-                    <th>불용</th>
-                    <th>비고</th>
-                    <th>관리</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr th:each="device : ${devicePage.content}">
-                    <td th:text="${device.manageNo != null and device.manageNo != 'NaN' ? device.manageNo : ''}"></td>
-                    <td th:text="${device.type != null and device.type != 'NaN' ? device.type : ''}"></td>
-                    <td th:text="${device.manufacturer != null and device.manufacturer != 'NaN' ? device.manufacturer : ''}"></td>
-                    <td th:text="${device.modelName != null and device.modelName != 'NaN' ? device.modelName : ''}"></td>
-                    <td th:text="${device.purchaseDate != null and device.purchaseDate != 'NaN' ? device.purchaseDate : ''}"></td>
-                    <td th:text="${device.ipAddress != null and device.ipAddress != 'NaN' ? device.ipAddress : ''}"></td>
-                    <td th:text="${device.location != null and device.location != 'NaN' ? device.location : ''}"></td>
-                    <td th:text="${device.purpose != null and device.purpose != 'NaN' ? device.purpose : ''}"></td>
-                    <td th:text="${device.setType != null and device.setType != 'NaN' ? device.setType : ''}"></td>
-                    <td th:text="${device.school != null and device.school.schoolName != null and device.school.schoolName != 'NaN' ? device.school.schoolName : ''}"></td>
-                    <td th:text="${device.operator != null and device.operator.name != null and device.operator.name != 'NaN' ? device.operator.name : ''}"></td>
-                    <td th:text="${device.operator != null and device.operator.position != null and device.operator.position != 'NaN' ? device.operator.position : ''}"></td>
-                    <td th:text="${device.unused != null and device.unused ? '예' : '아니오'}"></td>
-                    <td th:text="${device.note != null and device.note != 'NaN' ? device.note : ''}"></td>
-                    <td>
-                        <a th:href="@{/device/modify/{id}(id=${device.deviceId})}" class="btn btn-sm btn-warning">수정</a>
-                        <form th:action="@{/device/remove}" method="post" style="display: inline;">
-                            <input type="hidden" name="device_id" th:value="${device.deviceId}">
-                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('정말 삭제하시겠습니까?')">삭제</button>
-                        </form>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-        <!-- 페이징 네비게이션 -->
-        <nav th:if="${devicePage.totalPages > 1}">
-            <ul class="pagination justify-content-center">
-                <li class="page-item" th:classappend="${devicePage.first} ? 'disabled'">
-                    <a class="page-link" th:href="@{/device/list(schoolId=${selectedSchoolId}, type=${selectedType}, page=${devicePage.number - 1}, size=${pageSize})}">이전</a>
-                </li>
-                <li class="page-item" th:each="i : ${#numbers.sequence(0, devicePage.totalPages - 1)}"
-                    th:classappend="${devicePage.number == i} ? 'active'">
-                    <a class="page-link" th:href="@{/device/list(schoolId=${selectedSchoolId}, type=${selectedType}, page=${i}, size=${pageSize})}" th:text="${i + 1}"></a>
-                </li>
-                <li class="page-item" th:classappend="${devicePage.last} ? 'disabled'">
-                    <a class="page-link" th:href="@{/device/list(schoolId=${selectedSchoolId}, type=${selectedType}, page=${devicePage.number + 1}, size=${pageSize})}">다음</a>
-                </li>
-            </ul>
-        </nav>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html> 

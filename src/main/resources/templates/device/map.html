@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>학교 구조도</title>
+    <style>
+        .map-container {
+            width: 100%;
+            height: 800px;
+            position: relative;
+        }
+        canvas {
+            border: 1px solid #ccc;
+            background-color: #f8f9fa;
+        }
+        .info-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            display: none;
+        }
+        .device-list {
+            margin-top: 20px;
+        }
+        .device-item {
+            padding: 5px;
+            margin: 2px 0;
+            background: #f0f0f0;
+            border-radius: 3px;
+        }
+        .school-selector {
+            margin-bottom: 20px;
+        }
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        .room-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>학교 구조도</h1>
+        <div class="school-selector">
+            <select id="schoolSelect" onchange="loadSchoolData()">
+                <option value="">학교 선택</option>
+                <option th:each="school : ${schools}" 
+                        th:value="${school.schoolId}"
+                        th:text="${school.schoolName}">
+                </option>
+            </select>
+        </div>
+        <div class="controls">
+            <button onclick="startDrawing()">교실 추가</button>
+            <button onclick="saveLayout()">레이아웃 저장</button>
+        </div>
+        <div class="map-container">
+            <canvas id="schoolMap"></canvas>
+            <div id="infoPanel" class="info-panel">
+                <h3 id="roomName"></h3>
+                <div id="deviceList" class="device-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('schoolMap');
+        const ctx = canvas.getContext('2d');
+        const infoPanel = document.getElementById('infoPanel');
+        const roomName = document.getElementById('roomName');
+        const deviceList = document.getElementById('deviceList');
+        const schoolSelect = document.getElementById('schoolSelect');
+
+        // Canvas 크기 설정
+        canvas.width = 1200;
+        canvas.height = 800;
+
+        let devices = [];
+        let rooms = new Map(); // location을 key로 하는 Map
+        let isDrawing = false;
+        let startX, startY;
+        let currentRoom = null;
+
+        // 학교 데이터 로드
+        async function loadSchoolData() {
+            const schoolId = schoolSelect.value;
+            if (!schoolId) return;
+
+            try {
+                const response = await fetch(`/device/api/devices/${schoolId}`);
+                devices = await response.json();
+                
+                // location별로 장비 그룹화
+                rooms.clear();
+                devices.forEach(device => {
+                    if (device.location) {
+                        if (!rooms.has(device.location)) {
+                            rooms.set(device.location, {
+                                name: device.location,
+                                x: 100,
+                                y: 100,
+                                width: 150,
+                                height: 100,
+                                devices: []
+                            });
+                        }
+                        rooms.get(device.location).devices.push(device);
+                    }
+                });
+
+                drawLayout();
+            } catch (error) {
+                console.error('Error loading data:', error);
+            }
+        }
+
+        // 교실 그리기
+        function drawLayout() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            rooms.forEach(room => {
+                // 교실 사각형 그리기
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(room.x, room.y, room.width, room.height);
+                
+                // 교실 이름 표시
+                ctx.fillStyle = '#333';
+                ctx.font = '14px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(room.name, room.x + room.width/2, room.y + room.height/2);
+
+                // 장비 표시
+                room.devices.forEach(device => {
+                    ctx.fillStyle = '#ff0000';
+                    ctx.beginPath();
+                    ctx.arc(room.x + 20, room.y + 20, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            });
+        }
+
+        // 교실 추가 시작
+        function startDrawing() {
+            isDrawing = true;
+            canvas.style.cursor = 'crosshair';
+        }
+
+        // 마우스 이벤트 처리
+        canvas.addEventListener('mousedown', (e) => {
+            if (!isDrawing) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            startX = e.clientX - rect.left;
+            startY = e.clientY - rect.top;
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            if (isDrawing && startX && startY) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                drawLayout();
+                
+                // 새 교실 미리보기
+                ctx.strokeStyle = '#00f';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(startX, startY, x - startX, y - startY);
+            }
+
+            // 기존 교실 위에 마우스가 있는지 확인
+            let foundRoom = null;
+            rooms.forEach(room => {
+                if (x >= room.x && x <= room.x + room.width &&
+                    y >= room.y && y <= room.y + room.height) {
+                    foundRoom = room;
+                }
+            });
+
+            if (foundRoom) {
+                infoPanel.style.display = 'block';
+                infoPanel.style.left = e.clientX + 10 + 'px';
+                infoPanel.style.top = e.clientY + 10 + 'px';
+                
+                roomName.textContent = foundRoom.name;
+                deviceList.innerHTML = foundRoom.devices.map(d => 
+                    `<div class="device-item">${d.manageNo} - ${d.type}</div>`
+                ).join('');
+            } else {
+                infoPanel.style.display = 'none';
+            }
+        });
+
+        canvas.addEventListener('mouseup', (e) => {
+            if (!isDrawing || !startX || !startY) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const endX = e.clientX - rect.left;
+            const endY = e.clientY - rect.top;
+
+            const roomName = prompt('교실 이름을 입력하세요:');
+            if (roomName) {
+                rooms.set(roomName, {
+                    name: roomName,
+                    x: Math.min(startX, endX),
+                    y: Math.min(startY, endY),
+                    width: Math.abs(endX - startX),
+                    height: Math.abs(endY - startY),
+                    devices: []
+                });
+            }
+
+            isDrawing = false;
+            startX = null;
+            startY = null;
+            canvas.style.cursor = 'default';
+            drawLayout();
+        });
+
+        // 레이아웃 저장
+        async function saveLayout() {
+            const schoolId = schoolSelect.value;
+            if (!schoolId) {
+                alert('학교를 선택해주세요.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/device/api/save-layout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        schoolId: schoolId,
+                        rooms: Array.from(rooms.entries())
+                    })
+                });
+
+                if (response.ok) {
+                    alert('레이아웃이 저장되었습니다.');
+                } else {
+                    alert('레이아웃 저장에 실패했습니다.');
+                }
+            } catch (error) {
+                console.error('Error saving layout:', error);
+                alert('레이아웃 저장 중 오류가 발생했습니다.');
+            }
+        }
+    </script>
+</body>
+</html> 

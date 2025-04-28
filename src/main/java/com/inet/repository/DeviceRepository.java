@@ -24,4 +24,10 @@ public interface DeviceRepository extends JpaRepository<Device, Long> {
     // type 목록 조회
     @Query("SELECT DISTINCT d.type FROM Device d")
     List<String> findDistinctTypes();
+
+    List<Device> findBySchoolSchoolId(Long schoolId);
+    List<Device> findByType(String type);
+    List<Device> findBySchoolSchoolIdAndType(Long schoolId, String type);
+
+    List<Device> findByLocation(String location);
 } 

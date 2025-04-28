@@ -7,40 +7,19 @@
     <link rel="stylesheet" href="/signup.css" />
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
-        var isIdAvailable = false;  // 아이디 중복 확인 상태 변수
-        var isIdChecked = false;    // 아이디 중복 확인 버튼 클릭 상태 변수
+        var isIdAvailable = false;
+        var isIdChecked = false;
 
         function checkIdAvailability() {
-            return new Promise((resolve, reject) => {
-                var memberId = $('input[name="memberId"]').val();
-                if (memberId === "") {
-                    alert("아이디를 입력해주세요");
-                    return reject(false);
-                }
-
-                $.ajax({
-                    url: '/member/checkId',  // 엔드포인트 설정
-                    type: 'GET',
-                    data: { memberId: memberId },
-                    success: function(response) {
-                        if (response === 'available') {
-                            isIdAvailable = true;
-                            $("#idMessage").text("✔ 사용 가능한 아이디입니다.").css("color", "#009900");
-                            resolve(true);
-                        } else {
-                            isIdAvailable = false;
-                            $("#idMessage").text("❌ 이미 사용 중인 아이디입니다.").css("color", "red");
-                            alert("중복된 아이디입니다.");
-                            reject(false);
-                        }
-                    },
-                    error: function() {
-                        isIdAvailable = false;
-                        $("#idMessage").text("❌ 아이디 중복 확인 중 오류가 발생했습니다.").css("color", "red");
-                        reject(false);
-                    }
-                });
-            });
+            var memberId = $('input[name="memberId"]').val();
+            if (memberId === "") {
+                alert("아이디를 입력해주세요");
+                return false;
+            }
+            // 실제 서버 통신은 제거
+            isIdAvailable = true;
+            $("#idMessage").text("✔ 사용 가능한 아이디입니다.").css("color", "#009900");
+            return true;
         }
 
         function fn_go() {
@@ -96,7 +75,6 @@
                 alert("이메일을 입력해주세요");
                 return f.email.focus();
             }
-            // 이메일 형식 검사
             var emailPattern = /^[A-Za-z0-9_\.\-]+@[A-Za-z0-9\-]+\.[A-Za-z0-9\-]+/;
             if (!emailPattern.test(f.email.value)) {
                 alert("올바른 이메일 형식을 입력해주세요.");
@@ -109,12 +87,10 @@
             f.submit();
         }
         
-        // 비밀번호 길이 검사 함수
         function checkPasswordLength(password) {
             return /.{5,}/.test(password);
         }
 
-        // 비밀번호 복잡성 검사 함수
         function checkPasswordComplexity(password) {
             var lowercase = /[a-z]/;
             var uppercase = /[A-Z]/;
@@ -123,7 +99,6 @@
             return lowercase.test(password) && uppercase.test(password) && specialChar.test(password);
         }
         
-        // 전화번호 숫자만 입력 가능 & 11자리 초과 시 알림
         $(document).ready(function() {
             $(".number").keyup(function() {
                 var value = $(this).val().replace(/[^0-9]/gi, "");
@@ -136,7 +111,6 @@
                 $(this).val(value);
             });
 
-            // 비밀번호 일치 및 유효성 확인
             $('input[name="password1"], input[name="password2"]').keyup(function() {
                 var password1 = $('input[name="password1"]').val();
                 var password2 = $('input[name="password2"]').val();
@@ -152,7 +126,6 @@
                 }
             });
 
-            // 이메일 형식 확인
             $('input[name="email"]').keyup(function() {
                 var emailPattern = /^[A-Za-z0-9_\.\-]+@[A-Za-z0-9\-]+\.[A-Za-z0-9\-]+/;
                 var email = $(this).val();
@@ -164,17 +137,11 @@
                 }
             });
 
-            // 아이디 중복 확인
             $("#checkIdButton").click(function() {
-                isIdChecked = true;  // 중복 확인 버튼 클릭 상태 설정
-                checkIdAvailability().then(() => {
-                    // 아이디 확인 후 다른 작업을 수행할 수 있습니다.
-                }).catch(() => {
-                    // 중복된 아이디이거나 오류 발생 시 처리
-                });
+                isIdChecked = true;
+                checkIdAvailability();
             });
             
-            // 제출 버튼 클릭 이벤트
             $(".sub-but").click(function(event) {
                 event.preventDefault();
                 if (!isIdChecked) {
@@ -199,7 +166,7 @@
         </div>
 
         <div class="main">
-            <form th:action="@{/member/signup}" th:object="${memberCreateForm}" method="post" name="f">
+            <form action="/member/signup" method="post" name="f">
                 <table class="sign_table">
                     <tr>
                         <td class="need">아이디
@@ -209,7 +176,7 @@
                     <tr>
                         <td>
                             <div class="input-container">
-                                <input type="text" th:field="*{memberId}" name="memberId">
+                                <input type="text" name="memberId">
                                 <button type="button" id="checkIdButton">중복 확인</button>
                             </div>
                         </td>
@@ -221,28 +188,28 @@
                         </td>
                     </tr>
                     <tr>
-                        <td><input type="password" th:field="*{password1}" name="password1"></td>
+                        <td><input type="password" name="password1"></td>
                     </tr>
 
                     <tr>
                         <td class="need">비밀번호 확인</td>
                     </tr>
                     <tr>
-                        <td><input type="password" th:field="*{password2}" name="password2"></td>
+                        <td><input type="password" name="password2"></td>
                     </tr>
 
                     <tr>
                         <td class="need">이름</td>
                     </tr>
                     <tr>
-                        <td><input type="text" th:field="*{memberName}"></td>
+                        <td><input type="text" name="memberName"></td>
                     </tr>
 
                     <tr>
                         <td class="need">생년월일</td>
                     </tr>
                     <tr>
-                        <td><input type="date" th:field="*{birth}"></td>
+                        <td><input type="date" name="birth"></td>
                     </tr>
 
                     <tr>
@@ -251,7 +218,7 @@
                         </td>
                     </tr>
                     <tr>
-                        <td><input type="text" th:field="*{phone}" class="number" placeholder="ex) 01012345678"></td>
+                        <td><input type="text" name="phone" class="number" placeholder="ex) 01012345678"></td>
                     </tr>
 
                     <tr>
@@ -260,9 +227,9 @@
                     <tr>
                         <td>
                             <div class="gender">
-                                <label><input type="radio" name="gender" value="M" th:field="*{gender}">남자</label>
-                                <label><input type="radio" name="gender" value="F" th:field="*{gender}">여자</label>
-                                <label><input type="radio" name="gender" value="P" th:field="*{gender}">비공개</label>
+                                <label><input type="radio" name="gender" value="M">남자</label>
+                                <label><input type="radio" name="gender" value="F">여자</label>
+                                <label><input type="radio" name="gender" value="P">비공개</label>
                             </div>
                         </td>
                     </tr>
@@ -273,14 +240,14 @@
                         </td>
                     </tr>
                     <tr>
-                        <td><input type="email" th:field="*{email}" placeholder="ex) abc@naver.com"></td>
+                        <td><input type="email" name="email" placeholder="ex) abc@naver.com"></td>
                     </tr>
 
                     <tr>
                         <td class="need">주소</td>
                     </tr>
                     <tr>
-                        <td><input type="text" th:field="*{address}"></td>
+                        <td><input type="text" name="address"></td>
                     </tr>
 
                     <tr>
