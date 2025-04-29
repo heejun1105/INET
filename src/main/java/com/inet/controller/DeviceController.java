@@ -11,6 +11,7 @@ import com.inet.service.DeviceService;
 import com.inet.service.SchoolService;
 import com.inet.service.OperatorService;
 import com.inet.service.ClassroomService;
+import com.inet.config.Views;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
@@ -27,6 +28,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
+import com.fasterxml.jackson.annotation.JsonView;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,16 +45,28 @@ public class DeviceController {
     private final ClassroomService classroomService;
 
     @GetMapping("/list")
-    public String list(
-            @RequestParam(required = false) Long schoolId,
-            @RequestParam(required = false) String type,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            Model model) {
+    public String list(@RequestParam(required = false) Long schoolId,
+                      @RequestParam(required = false) String type,
+                      @RequestParam(required = false) String roomName,
+                      @RequestParam(defaultValue = "0") int page,
+                      @RequestParam(defaultValue = "10") int size,
+                      Model model) {
+        List<Device> devices;
+        if (schoolId != null) {
+            devices = deviceService.findBySchoolId(schoolId);
+        } else if (type != null && !type.isEmpty()) {
+            devices = deviceService.findByType(type);
+        } else if (roomName != null && !roomName.isEmpty()) {
+            devices = deviceService.findByClassroomRoomName(roomName);
+        } else {
+            devices = deviceService.findAll();
+        }
+        
         model.addAttribute("schools", schoolService.getAllSchools());
         model.addAttribute("types", deviceService.getAllTypes());
         model.addAttribute("selectedSchoolId", schoolId);
         model.addAttribute("selectedType", type);
+        model.addAttribute("selectedRoomName", roomName);
 
         Pageable pageable = PageRequest.of(page, size);
         Page<Device> devicePage = deviceService.getDevices(schoolId, type, pageable);
@@ -66,15 +80,37 @@ public class DeviceController {
     public String registerForm(Model model) {
         model.addAttribute("device", new Device());
         model.addAttribute("schools", schoolService.getAllSchools());
+        model.addAttribute("classrooms", classroomService.getAllClassrooms());
         return "device/register";
     }
 
     @PostMapping("/register")
-    public String register(Device device, String operatorName, String operatorPosition) {
+    public String register(Device device, String operatorName, String operatorPosition, String location) {
         log.info("Registering device: {}", device);
         
         // 학교 정보 가져오기
         School school = device.getSchool();
+        if (school == null) {
+            throw new IllegalArgumentException("학교 정보가 필요합니다.");
+        }
+        
+        // 위치 정보로 교실 생성 또는 찾기
+        if (location == null || location.trim().isEmpty()) {
+            throw new IllegalArgumentException("위치 정보가 필요합니다.");
+        }
+        
+        Classroom classroom = classroomService.findByRoomName(location);
+        if (classroom == null) {
+            classroom = new Classroom();
+            classroom.setRoomName(location);
+            classroom.setSchool(school);
+            classroom.setXCoordinate(0);
+            classroom.setYCoordinate(0);
+            classroom.setWidth(100);
+            classroom.setHeight(100);
+            classroom = classroomService.saveClassroom(classroom);
+        }
+        device.setClassroom(classroom);
         
         // 담당자 정보 저장
         Operator operator = new Operator();
@@ -94,15 +130,30 @@ public class DeviceController {
     public String modifyForm(@PathVariable Long id, Model model) {
         model.addAttribute("device", deviceService.getDeviceById(id).orElseThrow());
         model.addAttribute("schools", schoolService.getAllSchools());
+        model.addAttribute("classrooms", classroomService.getAllClassrooms());
         return "device/modify";
     }
 
     @PostMapping("/modify")
-    public String modify(Device device, String operatorName, String operatorPosition) {
+    public String modify(Device device, String operatorName, String operatorPosition, String location) {
         log.info("Modifying device: {}", device);
         
         // 학교 정보 가져오기
         School school = device.getSchool();
+        
+        // 위치 정보로 교실 생성 또는 찾기
+        Classroom classroom = classroomService.findByRoomName(location);
+        if (classroom == null) {
+            classroom = new Classroom();
+            classroom.setRoomName(location);
+            classroom.setSchool(school);
+            classroom.setXCoordinate(0);
+            classroom.setYCoordinate(0);
+            classroom.setWidth(100);
+            classroom.setHeight(100);
+            classroom = classroomService.saveClassroom(classroom);
+        }
+        device.setClassroom(classroom);
         
         // 담당자 정보 업데이트
         Operator operator = device.getOperator();
@@ -162,6 +213,7 @@ public class DeviceController {
 
     @GetMapping("/api/classrooms/{schoolId}")
     @ResponseBody
+    @JsonView(Views.Summary.class)
     public List<Classroom> getClassrooms(@PathVariable Long schoolId) {
         return classroomService.findBySchoolId(schoolId);
     }
@@ -179,14 +231,19 @@ public class DeviceController {
             Long schoolId = Long.parseLong(request.get("schoolId").toString());
             List<Map<String, Object>> rooms = (List<Map<String, Object>>) request.get("rooms");
             
-            // 각 교실의 위치 정보를 장비의 location에 저장
+            // 각 교실의 위치 정보를 저장
             for (Map<String, Object> room : rooms) {
                 String roomName = (String) room.get("name");
-                List<Device> devices = deviceService.findByLocation(roomName);
+                Map<String, Object> position = (Map<String, Object>) room.get("position");
                 
-                for (Device device : devices) {
-                    device.setLocation(roomName);
-                    deviceService.updateDevice(device);
+                // 교실 정보 업데이트
+                Classroom classroom = classroomService.findByRoomName(roomName);
+                if (classroom != null) {
+                    classroom.setXCoordinate((Integer) position.get("x"));
+                    classroom.setYCoordinate((Integer) position.get("y"));
+                    classroom.setWidth((Integer) position.get("width"));
+                    classroom.setHeight((Integer) position.get("height"));
+                    classroomService.updateClassroom(classroom);
                 }
             }
             

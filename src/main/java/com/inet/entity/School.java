@@ -7,10 +7,17 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Column;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.NoArgsConstructor;
+import jakarta.persistence.OneToMany;
+import java.util.List;
 
 @Entity
 @Table(name = "school")
-@Data
+@Getter
+@Setter
+@NoArgsConstructor
 public class School {
     
     @Id
@@ -23,20 +30,18 @@ public class School {
     
     private Integer ip;
 
-    public Long getSchoolId() {
-        return schoolId;
-    }
+    @OneToMany(mappedBy = "school")
+    private List<Classroom> classrooms;
 
-    public void setSchoolId(Long schoolId) {
-        this.schoolId = schoolId;
-    }
+    @OneToMany(mappedBy = "school")
+    private List<Operator> operators;
 
-    public String getSchoolName() {
+    public String getName() {
         return schoolName;
     }
 
-    public void setSchoolName(String schoolName) {
-        this.schoolName = schoolName;
+    public void setName(String name) {
+        this.schoolName = name;
     }
 
     public Integer getIp() {
@@ -45,17 +50,5 @@ public class School {
 
     public void setIp(Integer ip) {
         this.ip = ip;
-    }
-
-    public void setName(String name) {
-        this.schoolName = name;
-    }
-
-    public void setAddress(String address) {
-        // This field is not present in the entity
-    }
-
-    public void setPhone(String phone) {
-        // This field is not present in the entity
     }
 } 

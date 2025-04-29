@@ -4,260 +4,210 @@
     <meta charset="UTF-8">
     <title>학교 구조도</title>
     <style>
-        .map-container {
-            width: 100%;
-            height: 800px;
+        .layout-container {
+            display: flex;
+            padding: 20px;
+        }
+        .canvas-container {
+            flex: 1;
             position: relative;
+        }
+        .control-panel {
+            width: 250px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-left: 1px solid #ddd;
         }
         canvas {
             border: 1px solid #ccc;
-            background-color: #f8f9fa;
+            background-color: #fff;
         }
-        .info-panel {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: white;
-            padding: 15px;
-            border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            display: none;
-        }
-        .device-list {
+        .room-list {
             margin-top: 20px;
         }
-        .device-item {
-            padding: 5px;
-            margin: 2px 0;
-            background: #f0f0f0;
-            border-radius: 3px;
+        .room-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
         }
-        .school-selector {
+        .room-item:hover {
+            background: #e9ecef;
+        }
+        .tool-panel {
             margin-bottom: 20px;
         }
-        .controls {
-            margin-bottom: 20px;
-            display: flex;
-            gap: 10px;
+        .btn {
+            padding: 8px 12px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
         }
-        .room-input {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
+        .btn:hover {
+            background: #e9ecef;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>학교 구조도</h1>
-        <div class="school-selector">
-            <select id="schoolSelect" onchange="loadSchoolData()">
-                <option value="">학교 선택</option>
-                <option th:each="school : ${schools}" 
-                        th:value="${school.schoolId}"
-                        th:text="${school.schoolName}">
-                </option>
-            </select>
+    <div class="layout-container">
+        <div class="canvas-container">
+            <canvas id="layoutCanvas"></canvas>
         </div>
-        <div class="controls">
-            <button onclick="startDrawing()">교실 추가</button>
-            <button onclick="saveLayout()">레이아웃 저장</button>
-        </div>
-        <div class="map-container">
-            <canvas id="schoolMap"></canvas>
-            <div id="infoPanel" class="info-panel">
-                <h3 id="roomName"></h3>
-                <div id="deviceList" class="device-list"></div>
+        <div class="control-panel">
+            <div class="tool-panel">
+                <button class="btn" onclick="layoutManager.resetView()">초기화</button>
+                <button class="btn" onclick="layoutManager.saveLayout()">저장</button>
+                <button class="btn" onclick="layoutManager.toggleGrid()">그리드</button>
+            </div>
+            <div class="room-list" id="roomList">
+                <!-- 미배치 교실 목록 -->
             </div>
         </div>
     </div>
 
     <script>
-        const canvas = document.getElementById('schoolMap');
-        const ctx = canvas.getContext('2d');
-        const infoPanel = document.getElementById('infoPanel');
-        const roomName = document.getElementById('roomName');
-        const deviceList = document.getElementById('deviceList');
-        const schoolSelect = document.getElementById('schoolSelect');
-
-        // Canvas 크기 설정
-        canvas.width = 1200;
-        canvas.height = 800;
-
-        let devices = [];
-        let rooms = new Map(); // location을 key로 하는 Map
-        let isDrawing = false;
-        let startX, startY;
-        let currentRoom = null;
-
-        // 학교 데이터 로드
-        async function loadSchoolData() {
-            const schoolId = schoolSelect.value;
-            if (!schoolId) return;
-
-            try {
-                const response = await fetch(`/device/api/devices/${schoolId}`);
-                devices = await response.json();
-                
-                // location별로 장비 그룹화
-                rooms.clear();
-                devices.forEach(device => {
-                    if (device.location) {
-                        if (!rooms.has(device.location)) {
-                            rooms.set(device.location, {
-                                name: device.location,
-                                x: 100,
-                                y: 100,
-                                width: 150,
-                                height: 100,
-                                devices: []
-                            });
-                        }
-                        rooms.get(device.location).devices.push(device);
-                    }
-                });
-
-                drawLayout();
-            } catch (error) {
-                console.error('Error loading data:', error);
+        // 기본 설정
+        const floorLayout = {
+            floor3: {
+                name: '3층',
+                rooms: ['미술실', '음악실', '역기실', '정보실', '컴퓨터실', '예절실', '회장실', 
+                       '3학년', '4학년', '교사연구실', '5학년', '6학년', '종합실']
+            },
+            floor2: {
+                name: '2층',
+                rooms: ['양치교실', '상담실', '영어실', '돌봄지원실', '돌봄교실', '회장실', 
+                       '1학년', '2학년', '도움반', '전담실', '구강보건실', '도서관']
+            },
+            floor1: {
+                name: '1층',
+                rooms: ['현관', '소강당', '보건실', '숙직실', '방송실', '교무실', '현관', '회장실', 
+                       '행정실', '교장실', '회의실', '현관', '유치원 다목적실', '유치원', '과학실', '현관']
             }
-        }
+        };
 
-        // 교실 그리기
-        function drawLayout() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            rooms.forEach(room => {
-                // 교실 사각형 그리기
-                ctx.strokeStyle = '#333';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(room.x, room.y, room.width, room.height);
+        const specialAreas = {
+            지친이실: { x: 50, y: 600 },
+            식당: { x: 800, y: 600 },
+            조리실: { x: 900, y: 600 },
+            영양사실: { x: 900, y: 650 },
+            강당: { x: 1100, y: 600 }
+        };
+
+        class SchoolLayoutManager {
+            constructor() {
+                this.canvas = document.getElementById('layoutCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.cellWidth = 100;
+                this.cellHeight = 80;
+                this.floorGap = 150;
+                this.showGrid = false;
                 
-                // 교실 이름 표시
-                ctx.fillStyle = '#333';
-                ctx.font = '14px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText(room.name, room.x + room.width/2, room.y + room.height/2);
-
-                // 장비 표시
-                room.devices.forEach(device => {
-                    ctx.fillStyle = '#ff0000';
-                    ctx.beginPath();
-                    ctx.arc(room.x + 20, room.y + 20, 5, 0, Math.PI * 2);
-                    ctx.fill();
-                });
-            });
-        }
-
-        // 교실 추가 시작
-        function startDrawing() {
-            isDrawing = true;
-            canvas.style.cursor = 'crosshair';
-        }
-
-        // 마우스 이벤트 처리
-        canvas.addEventListener('mousedown', (e) => {
-            if (!isDrawing) return;
-            
-            const rect = canvas.getBoundingClientRect();
-            startX = e.clientX - rect.left;
-            startY = e.clientY - rect.top;
-        });
-
-        canvas.addEventListener('mousemove', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-
-            if (isDrawing && startX && startY) {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                drawLayout();
-                
-                // 새 교실 미리보기
-                ctx.strokeStyle = '#00f';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(startX, startY, x - startX, y - startY);
+                this.initCanvas();
+                this.setupEventListeners();
             }
 
-            // 기존 교실 위에 마우스가 있는지 확인
-            let foundRoom = null;
-            rooms.forEach(room => {
-                if (x >= room.x && x <= room.x + room.width &&
-                    y >= room.y && y <= room.y + room.height) {
-                    foundRoom = room;
+            initCanvas() {
+                // Canvas 크기 설정
+                this.canvas.width = 1400;
+                this.canvas.height = 800;
+                this.draw();
+            }
+
+            setupEventListeners() {
+                this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
+                this.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
+                this.canvas.addEventListener('mouseup', this.handleMouseUp.bind(this));
+            }
+
+            draw() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                if (this.showGrid) {
+                    this.drawGrid();
                 }
-            });
 
-            if (foundRoom) {
-                infoPanel.style.display = 'block';
-                infoPanel.style.left = e.clientX + 10 + 'px';
-                infoPanel.style.top = e.clientY + 10 + 'px';
+                // 각 층 그리기
+                this.drawFloor(floorLayout.floor3, 50);
+                this.drawFloor(floorLayout.floor2, 250);
+                this.drawFloor(floorLayout.floor1, 450);
                 
-                roomName.textContent = foundRoom.name;
-                deviceList.innerHTML = foundRoom.devices.map(d => 
-                    `<div class="device-item">${d.manageNo} - ${d.type}</div>`
-                ).join('');
-            } else {
-                infoPanel.style.display = 'none';
-            }
-        });
-
-        canvas.addEventListener('mouseup', (e) => {
-            if (!isDrawing || !startX || !startY) return;
-
-            const rect = canvas.getBoundingClientRect();
-            const endX = e.clientX - rect.left;
-            const endY = e.clientY - rect.top;
-
-            const roomName = prompt('교실 이름을 입력하세요:');
-            if (roomName) {
-                rooms.set(roomName, {
-                    name: roomName,
-                    x: Math.min(startX, endX),
-                    y: Math.min(startY, endY),
-                    width: Math.abs(endX - startX),
-                    height: Math.abs(endY - startY),
-                    devices: []
-                });
+                // 특별 구역 그리기
+                this.drawSpecialAreas();
             }
 
-            isDrawing = false;
-            startX = null;
-            startY = null;
-            canvas.style.cursor = 'default';
-            drawLayout();
-        });
+            drawGrid() {
+                this.ctx.strokeStyle = '#eee';
+                this.ctx.lineWidth = 0.5;
 
-        // 레이아웃 저장
-        async function saveLayout() {
-            const schoolId = schoolSelect.value;
-            if (!schoolId) {
-                alert('학교를 선택해주세요.');
-                return;
-            }
-
-            try {
-                const response = await fetch('/device/api/save-layout', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        schoolId: schoolId,
-                        rooms: Array.from(rooms.entries())
-                    })
-                });
-
-                if (response.ok) {
-                    alert('레이아웃이 저장되었습니다.');
-                } else {
-                    alert('레이아웃 저장에 실패했습니다.');
+                // 수직선
+                for (let x = 0; x <= this.canvas.width; x += this.cellWidth) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x, 0);
+                    this.ctx.lineTo(x, this.canvas.height);
+                    this.ctx.stroke();
                 }
-            } catch (error) {
-                console.error('Error saving layout:', error);
-                alert('레이아웃 저장 중 오류가 발생했습니다.');
+
+                // 수평선
+                for (let y = 0; y <= this.canvas.height; y += this.cellHeight) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(0, y);
+                    this.ctx.lineTo(this.canvas.width, y);
+                    this.ctx.stroke();
+                }
+            }
+
+            drawFloor(floor, yOffset) {
+                this.ctx.strokeStyle = '#333';
+                this.ctx.fillStyle = '#333';
+                this.ctx.lineWidth = 1;
+                this.ctx.font = '12px Arial';
+
+                floor.rooms.forEach((room, index) => {
+                    const x = index * this.cellWidth;
+                    this.drawRoom(room, x, yOffset);
+                });
+            }
+
+            drawRoom(roomName, x, y) {
+                this.ctx.strokeRect(x, y, this.cellWidth, this.cellHeight);
+                
+                // 텍스트 줄바꿈 처리
+                const words = roomName.split(' ');
+                let lineHeight = 15;
+                words.forEach((word, index) => {
+                    this.ctx.fillText(word, 
+                        x + this.cellWidth/2 - this.ctx.measureText(word).width/2, 
+                        y + 30 + (index * lineHeight));
+                });
+            }
+
+            drawSpecialAreas() {
+                Object.entries(specialAreas).forEach(([name, pos]) => {
+                    this.drawRoom(name, pos.x, pos.y);
+                });
+            }
+
+            toggleGrid() {
+                this.showGrid = !this.showGrid;
+                this.draw();
+            }
+
+            resetView() {
+                this.draw();
+            }
+
+            saveLayout() {
+                // 레이아웃 저장 로직 구현
+                console.log('Layout saved');
             }
         }
+
+        // 초기화
+        const layoutManager = new SchoolLayoutManager();
     </script>
 </body>
 </html> 

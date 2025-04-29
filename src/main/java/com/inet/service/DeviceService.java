@@ -132,7 +132,7 @@ public class DeviceService {
 
         // 헤더 생성
         Row headerRow = sheet.createRow(0);
-        String[] headers = {"ID", "학교명", "관리번호", "유형", "제조사", "모델명", "구매일자", "IP주소", "위치", "용도", "세트분류", "운영자", "직위", "불용", "비고"};
+        String[] headers = {"ID", "학교명", "관리번호", "유형", "제조사", "모델명", "구매일자", "IP주소", "교실", "용도", "세트분류", "운영자", "직위", "불용", "비고"};
         for (int i = 0; i < headers.length; i++) {
             Cell cell = headerRow.createCell(i);
             cell.setCellValue(headers[i]);
@@ -151,7 +151,7 @@ public class DeviceService {
             row.createCell(5).setCellValue(device.getModelName());
             row.createCell(6).setCellValue(device.getPurchaseDate() != null ? device.getPurchaseDate().toString() : "");
             row.createCell(7).setCellValue(device.getIpAddress());
-            row.createCell(8).setCellValue(device.getLocation());
+            row.createCell(8).setCellValue(device.getClassroom() != null ? device.getClassroom().getRoomName() : "");
             row.createCell(9).setCellValue(device.getPurpose());
             row.createCell(10).setCellValue(device.getSetType());
             row.createCell(11).setCellValue(device.getOperator() != null ? device.getOperator().getName() : "");
@@ -169,7 +169,11 @@ public class DeviceService {
         workbook.close();
     }
 
-    public List<Device> findByLocation(String location) {
-        return deviceRepository.findByLocation(location);
+    public List<Device> findByClassroomRoomName(String roomName) {
+        return deviceRepository.findByClassroomRoomName(roomName);
+    }
+
+    public List<Device> findBySchoolId(Long schoolId) {
+        return deviceRepository.findBySchoolSchoolId(schoolId);
     }
 } 

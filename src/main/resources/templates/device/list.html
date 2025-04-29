@@ -46,7 +46,7 @@
                             <th>모델명</th>
                             <th>구매일자</th>
                             <th>IP주소</th>
-                            <th>위치</th>
+                            <th>교실</th>
                             <th>용도</th>
                             <th>세트분류</th>
                             <th>학교</th>
@@ -65,7 +65,7 @@
                             <td th:text="${device.modelName != null and device.modelName != 'NaN' ? device.modelName : ''}"></td>
                             <td th:text="${device.purchaseDate != null and device.purchaseDate != 'NaN' ? device.purchaseDate : ''}"></td>
                             <td th:text="${device.ipAddress != null and device.ipAddress != 'NaN' ? device.ipAddress : ''}"></td>
-                            <td th:text="${device.location != null and device.location != 'NaN' ? device.location : ''}"></td>
+                            <td th:text="${device.classroom != null and device.classroom.roomName != null and device.classroom.roomName != 'NaN' ? device.classroom.roomName : ''}"></td>
                             <td th:text="${device.purpose != null and device.purpose != 'NaN' ? device.purpose : ''}"></td>
                             <td th:text="${device.setType != null and device.setType != 'NaN' ? device.setType : ''}"></td>
                             <td th:text="${device.school != null and device.school.schoolName != null and device.school.schoolName != 'NaN' ? device.school.schoolName : ''}"></td>

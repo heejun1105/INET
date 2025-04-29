@@ -16,6 +16,20 @@
                 <form th:action="@{/device/modify}" method="post" th:object="${device}">
                     <table class="sign_table">
                         <tr>
+                            <td class="need">학교</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <select th:field="*{school}" required>
+                                    <option value="">학교 선택</option>
+                                    <option th:each="school : ${schools}" 
+                                            th:value="${school.schoolId}" 
+                                            th:text="${school.schoolName}"></option>
+                                </select>
+                            </td>
+                        </tr>
+
+                        <tr>
                             <td class="need">관리번호</td>
                         </tr>
                         <tr>
@@ -61,7 +75,7 @@
                             <td class="need">위치</td>
                         </tr>
                         <tr>
-                            <td><input type="text" th:field="*{location}"></td>
+                            <td><input type="text" name="location" th:value="${device.classroom != null ? device.classroom.roomName : ''}" required></td>
                         </tr>
 
                         <tr>
@@ -76,20 +90,6 @@
                         </tr>
                         <tr>
                             <td><input type="text" th:field="*{setType}"></td>
-                        </tr>
-
-                        <tr>
-                            <td class="need">학교</td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <select th:field="*{school}" required>
-                                    <option value="">학교 선택</option>
-                                    <option th:each="school : ${schools}" 
-                                            th:value="${school.schoolId}" 
-                                            th:text="${school.schoolName}"></option>
-                                </select>
-                            </td>
                         </tr>
 
                         <tr>
