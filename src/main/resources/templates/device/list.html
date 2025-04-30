@@ -89,16 +89,32 @@
                 <nav th:if="${totalPages > 1}">
                     <ul class="pagination">
                         <li th:classappend="${startPage == 1} ? 'disabled'">
-                            <a th:if="${startPage != 1}" th:href="@{|/device/list?page=${startPage - 1}|}" th:text="'이전'"></a>
+                            <a th:if="${startPage != 1}" 
+                               th:href="@{/device/list(
+                                   page=${startPage - 1},
+                                   schoolId=${selectedSchoolId != null ? selectedSchoolId : null},
+                                   type=${selectedType != null and selectedType != '' ? selectedType : null}
+                               )}"
+                               th:text="'이전'"></a>
                             <a th:if="${startPage == 1}" href="javascript:void(0);" th:text="'이전'"></a>
                         </li>
                         <li th:each="pageNum : ${#numbers.sequence(startPage, endPage)}">
-                            <a th:href="@{|/device/list?page=${pageNum}|}"
+                            <a th:href="@{/device/list(
+                                   page=${pageNum},
+                                   schoolId=${selectedSchoolId != null ? selectedSchoolId : null},
+                                   type=${selectedType != null and selectedType != '' ? selectedType : null}
+                               )}"
                                th:text="${pageNum}"
                                th:classappend="${pageNum == currentPage} ? 'active'"></a>
                         </li>
                         <li th:classappend="${endPage == totalPages} ? 'disabled'">
-                            <a th:if="${endPage != totalPages}" th:href="@{|/device/list?page=${endPage + 1}|}" th:text="'다음'"></a>
+                            <a th:if="${endPage != totalPages}" 
+                               th:href="@{/device/list(
+                                   page=${endPage + 1},
+                                   schoolId=${selectedSchoolId != null ? selectedSchoolId : null},
+                                   type=${selectedType != null and selectedType != '' ? selectedType : null}
+                               )}"
+                               th:text="'다음'"></a>
                             <a th:if="${endPage == totalPages}" href="javascript:void(0);" th:text="'다음'"></a>
                         </li>
                     </ul>
