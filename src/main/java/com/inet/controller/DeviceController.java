@@ -48,19 +48,9 @@ public class DeviceController {
     public String list(@RequestParam(required = false) Long schoolId,
                       @RequestParam(required = false) String type,
                       @RequestParam(required = false) String roomName,
-                      @RequestParam(defaultValue = "0") int page,
+                      @RequestParam(defaultValue = "1") int page,
                       @RequestParam(defaultValue = "10") int size,
                       Model model) {
-        List<Device> devices;
-        if (schoolId != null) {
-            devices = deviceService.findBySchoolId(schoolId);
-        } else if (type != null && !type.isEmpty()) {
-            devices = deviceService.findByType(type);
-        } else if (roomName != null && !roomName.isEmpty()) {
-            devices = deviceService.findByClassroomRoomName(roomName);
-        } else {
-            devices = deviceService.findAll();
-        }
         
         model.addAttribute("schools", schoolService.getAllSchools());
         model.addAttribute("types", deviceService.getAllTypes());
@@ -68,11 +58,19 @@ public class DeviceController {
         model.addAttribute("selectedType", type);
         model.addAttribute("selectedRoomName", roomName);
 
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page - 1, size);
         Page<Device> devicePage = deviceService.getDevices(schoolId, type, pageable);
+        int totalPages = devicePage.getTotalPages();
+        int currentPage = page;
+        int startPage = ((currentPage - 1) / 10) * 10 + 1;
+        int endPage = Math.min(startPage + 9, totalPages);
+
         model.addAttribute("devicePage", devicePage);
-        model.addAttribute("currentPage", page);
+        model.addAttribute("currentPage", currentPage);
         model.addAttribute("pageSize", size);
+        model.addAttribute("startPage", startPage);
+        model.addAttribute("endPage", endPage);
+        model.addAttribute("totalPages", totalPages);
         return "device/list";
     }
 

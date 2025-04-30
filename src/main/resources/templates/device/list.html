@@ -86,15 +86,22 @@
                     </tbody>
                 </table>
                 <!-- 페이징 네비게이션 -->
-                <nav th:if="${devicePage.totalPages > 1}" class="pagination">
-                    <a th:href="@{/device/list(schoolId=${selectedSchoolId}, type=${selectedType}, page=${devicePage.number - 1}, size=${pageSize})}" 
-                       th:classappend="${devicePage.first} ? 'disabled'">이전</a>
-                    <a th:each="i : ${#numbers.sequence(0, devicePage.totalPages - 1)}"
-                       th:href="@{/device/list(schoolId=${selectedSchoolId}, type=${selectedType}, page=${i}, size=${pageSize})}"
-                       th:text="${i + 1}"
-                       th:classappend="${devicePage.number == i} ? 'active'"></a>
-                    <a th:href="@{/device/list(schoolId=${selectedSchoolId}, type=${selectedType}, page=${devicePage.number + 1}, size=${pageSize})}"
-                       th:classappend="${devicePage.last} ? 'disabled'">다음</a>
+                <nav th:if="${totalPages > 1}">
+                    <ul class="pagination">
+                        <li th:classappend="${startPage == 1} ? 'disabled'">
+                            <a th:if="${startPage != 1}" th:href="@{|/device/list?page=${startPage - 1}|}" th:text="'이전'"></a>
+                            <a th:if="${startPage == 1}" href="javascript:void(0);" th:text="'이전'"></a>
+                        </li>
+                        <li th:each="pageNum : ${#numbers.sequence(startPage, endPage)}">
+                            <a th:href="@{|/device/list?page=${pageNum}|}"
+                               th:text="${pageNum}"
+                               th:classappend="${pageNum == currentPage} ? 'active'"></a>
+                        </li>
+                        <li th:classappend="${endPage == totalPages} ? 'disabled'">
+                            <a th:if="${endPage != totalPages}" th:href="@{|/device/list?page=${endPage + 1}|}" th:text="'다음'"></a>
+                            <a th:if="${endPage == totalPages}" href="javascript:void(0);" th:text="'다음'"></a>
+                        </li>
+                    </ul>
                 </nav>
             </div>
         </div>

@@ -9,11 +9,16 @@
         }
         .map-container {
             display: flex;
-            position: relative;
         }
         .canvas-container {
             flex: 1;
             position: relative;
+        }
+        .control-panel {
+            width: 300px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-left: 1px solid #ccc;
         }
         canvas {
             border: 1px solid #ccc;
@@ -28,36 +33,18 @@
             border-radius: 5px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
             display: none;
+            z-index: 1000;
         }
-        .device-list {
-            margin-top: 20px;
+        .building-selector {
+            margin-bottom: 15px;
         }
-        .device-item {
-            padding: 5px;
-            margin: 2px 0;
-            background: #f0f0f0;
-            border-radius: 3px;
-        }
-        .school-selector {
-            margin-bottom: 20px;
-        }
-        .controls {
-            margin-bottom: 20px;
-            display: flex;
-            gap: 10px;
-        }
-        .room-input {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
+        .floor-selector {
+            margin-bottom: 15px;
         }
         .unplaced-rooms {
-            width: 250px;
-            padding: 20px;
-            background: #f8f9fa;
-            border-left: 1px solid #ccc;
+            margin-top: 20px;
+            height: 600px;
             overflow-y: auto;
-            height: 800px;
         }
         .unplaced-room-item {
             padding: 10px;
@@ -71,8 +58,31 @@
         .unplaced-room-item:hover {
             background: #e9ecef;
         }
-        .unplaced-room-item.dragging {
-            opacity: 0.5;
+        .building-tab {
+            display: inline-block;
+            padding: 8px 15px;
+            margin-right: 5px;
+            background: #e9ecef;
+            border: 1px solid #ddd;
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+        }
+        .building-tab.active {
+            background: #fff;
+            border-bottom: none;
+        }
+        .floor-button {
+            padding: 5px 10px;
+            margin: 0 5px 5px 0;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .floor-button.active {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
         }
     </style>
 </head>
@@ -88,21 +98,30 @@
                 </option>
             </select>
         </div>
-        <div class="controls">
-            <button onclick="startDrawing()">교실 추가</button>
-            <button onclick="saveLayout()">레이아웃 저장</button>
-        </div>
         <div class="map-container">
             <div class="canvas-container">
                 <canvas id="schoolMap"></canvas>
                 <div id="infoPanel" class="info-panel">
                     <h3 id="roomName"></h3>
-                    <div id="deviceList" class="device-list"></div>
+                    <div id="deviceList"></div>
                 </div>
             </div>
-            <div id="unplacedRooms" class="unplaced-rooms">
-                <h3>미배치 교실</h3>
-                <div id="unplacedRoomList"></div>
+            <div class="control-panel">
+                <div class="building-selector" id="buildingTabs">
+                    <!-- 건물 탭은 동적으로 생성됨 -->
+                </div>
+                <div class="floor-selector" id="floorButtons">
+                    <!-- 층 버튼은 동적으로 생성됨 -->
+                </div>
+                <div class="controls">
+                    <button onclick="saveLayout()">레이아웃 저장</button>
+                    <button onclick="addBuilding()">건물 추가</button>
+                    <button onclick="addFloor()">층 추가</button>
+                </div>
+                <div class="unplaced-rooms">
+                    <h3>미배치 교실</h3>
+                    <div id="unplacedRoomList"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -113,20 +132,100 @@
         const infoPanel = document.getElementById('infoPanel');
         const roomName = document.getElementById('roomName');
         const deviceList = document.getElementById('deviceList');
-        const schoolSelect = document.getElementById('schoolSelect');
-        const unplacedRoomList = document.getElementById('unplacedRoomList');
+        const buildingTabs = document.getElementById('buildingTabs');
+        const floorButtons = document.getElementById('floorButtons');
 
         // Canvas 크기 설정
         canvas.width = 1200;
         canvas.height = 800;
 
         let devices = [];
-        let rooms = new Map(); // location을 key로 하는 Map
-        let isDrawing = false;
-        let startX, startY;
-        let currentRoom = null;
+        let rooms = new Map();
+        let classrooms = [];
+        let isDragging = false;
         let draggedRoom = null;
-        let classrooms = []; // 전역 변수로 선언
+        let selectedRoom = null;
+        let dragOffsetX = 0;
+        let dragOffsetY = 0;
+
+        // 건물 및 층 설정
+        let buildings = [
+            { id: 'main', name: '본관', floors: [1, 2, 3] },
+            { id: 'sub', name: '후관', floors: [1, 2] }
+        ];
+        let currentBuilding = 'main';
+        let currentFloor = 1;
+
+        const ROOM_WIDTH = 150;
+        const ROOM_HEIGHT = 100;
+        const ROOM_GAP = 0; // 교실 간 간격을 0으로 설정
+
+        // 건물 탭 생성
+        function createBuildingTabs() {
+            buildingTabs.innerHTML = buildings.map(building => `
+                <div class="building-tab ${building.id === currentBuilding ? 'active' : ''}"
+                     onclick="switchBuilding('${building.id}')">
+                    ${building.name}
+                </div>
+            `).join('');
+        }
+
+        // 층 버튼 생성
+        function createFloorButtons() {
+            const currentBuildingData = buildings.find(b => b.id === currentBuilding);
+            if (!currentBuildingData) return;
+
+            floorButtons.innerHTML = currentBuildingData.floors.map(floor => `
+                <button class="floor-button ${floor === currentFloor ? 'active' : ''}"
+                        onclick="switchFloor(${floor})">
+                    ${floor}층
+                </button>
+            `).join('');
+        }
+
+        // 건물 전환
+        function switchBuilding(buildingId) {
+            currentBuilding = buildingId;
+            const building = buildings.find(b => b.id === buildingId);
+            currentFloor = building.floors[0];
+            createBuildingTabs();
+            createFloorButtons();
+            drawLayout();
+        }
+
+        // 층 전환
+        function switchFloor(floor) {
+            currentFloor = floor;
+            createFloorButtons();
+            drawLayout();
+        }
+
+        // 건물 추가
+        function addBuilding() {
+            const buildingName = prompt('건물 이름을 입력하세요:');
+            if (!buildingName) return;
+
+            const buildingId = 'building_' + (buildings.length + 1);
+            buildings.push({
+                id: buildingId,
+                name: buildingName,
+                floors: [1]
+            });
+
+            createBuildingTabs();
+            createFloorButtons();
+        }
+
+        // 층 추가
+        function addFloor() {
+            const building = buildings.find(b => b.id === currentBuilding);
+            if (!building) return;
+
+            const maxFloor = Math.max(...building.floors);
+            building.floors.push(maxFloor + 1);
+            building.floors.sort((a, b) => b - a);
+            createFloorButtons();
+        }
 
         // 학교 데이터 로드
         async function loadSchoolData() {
@@ -134,65 +233,34 @@
             if (!schoolId) return;
 
             try {
-                // 교실 정보 먼저 가져오기
                 const classroomResponse = await fetch(`/device/api/classrooms/${schoolId}`);
                 classrooms = await classroomResponse.json();
-                console.log('전체 교실 목록:', classrooms);
-                console.log('교실 개수:', classrooms.length);
                 
-                // 각 교실의 상세 정보 출력
-                classrooms.forEach((classroom, index) => {
-                    console.log(`교실 ${index + 1}:`, {
-                        id: classroom.classroomId,
-                        name: classroom.roomName,
-                        x: classroom.xCoordinate,
-                        y: classroom.yCoordinate,
-                        width: classroom.width,
-                        height: classroom.height
-                    });
-                });
-                
-                // 장비 정보 가져오기
                 const deviceResponse = await fetch(`/device/api/devices/${schoolId}`);
                 devices = await deviceResponse.json();
-                console.log('Devices:', devices);
 
-                // 교실별로 장비 매핑
+                // 교실 정보 초기화
                 rooms.clear();
-                console.log('rooms Map 초기화 후 크기:', rooms.size);
                 
-                classrooms.forEach(classroom => {
-                    rooms.set(classroom.roomName, {
-                        id: classroom.classroomId,
-                        name: classroom.roomName,
-                        x: classroom.xCoordinate || 0,
-                        y: classroom.yCoordinate || 0,
-                        width: classroom.width || 150,
-                        height: classroom.height || 100,
-                        devices: devices.filter(device => device.classroom && device.classroom.classroomId === classroom.classroomId)
-                    });
-                });
-                
-                console.log('rooms Map 업데이트 후 크기:', rooms.size);
-                console.log('rooms Map 내용:', Array.from(rooms.entries()));
-
                 // 미배치 교실 목록 업데이트
                 updateUnplacedRoomsList();
                 drawLayout();
+
+                // 건물 및 층 UI 초기화
+                createBuildingTabs();
+                createFloorButtons();
             } catch (error) {
                 console.error('Error loading data:', error);
-                console.error('Error details:', error.message);
             }
         }
 
         // 미배치 교실 목록 업데이트
         function updateUnplacedRoomsList() {
+            const unplacedRoomList = document.getElementById('unplacedRoomList');
             unplacedRoomList.innerHTML = '';
-            console.log('Updating unplaced rooms list with classrooms:', classrooms);
+            
             classrooms.forEach(classroom => {
-                console.log('Checking classroom:', classroom.roomName, 'x:', classroom.xCoordinate, 'y:', classroom.yCoordinate);
-                if (!classroom.xCoordinate || !classroom.yCoordinate || (classroom.xCoordinate === 0 && classroom.yCoordinate === 0)) {
-                    console.log('Adding to unplaced list:', classroom.roomName);
+                if (!rooms.has(classroom.roomName)) {
                     const roomItem = document.createElement('div');
                     roomItem.className = 'unplaced-room-item';
                     roomItem.textContent = classroom.roomName;
@@ -209,110 +277,34 @@
             });
         }
 
-        // 교실 그리기
+        // 레이아웃 그리기
         function drawLayout() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
+            // 현재 건물/층에 해당하는 교실만 표시
             rooms.forEach(room => {
-                // 교실 사각형 그리기
-                ctx.strokeStyle = '#333';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(room.x, room.y, room.width, room.height);
-                
-                // 교실 이름 표시
-                ctx.fillStyle = '#333';
-                ctx.font = '14px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText(room.name, room.x + room.width/2, room.y + room.height/2);
+                if (room.building === currentBuilding && room.floor === currentFloor) {
+                    // 교실 사각형 그리기
+                    ctx.strokeStyle = '#333';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(room.x, room.y, room.width, room.height);
+                    
+                    // 교실 이름 표시
+                    ctx.fillStyle = '#333';
+                    ctx.font = '14px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(room.name, room.x + room.width/2, room.y + room.height/2);
 
-                // 장비 표시
-                room.devices.forEach(device => {
-                    ctx.fillStyle = '#ff0000';
-                    ctx.beginPath();
-                    ctx.arc(room.x + 20, room.y + 20, 5, 0, Math.PI * 2);
-                    ctx.fill();
-                });
-            });
-        }
-
-        // 교실 추가 시작
-        function startDrawing() {
-            isDrawing = true;
-            canvas.style.cursor = 'crosshair';
-        }
-
-        // 마우스 이벤트 처리
-        canvas.addEventListener('mousedown', (e) => {
-            if (!isDrawing) return;
-            
-            const rect = canvas.getBoundingClientRect();
-            startX = e.clientX - rect.left;
-            startY = e.clientY - rect.top;
-        });
-
-        canvas.addEventListener('mousemove', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-
-            if (isDrawing && startX && startY) {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                drawLayout();
-                
-                // 새 교실 미리보기
-                ctx.strokeStyle = '#00f';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(startX, startY, x - startX, y - startY);
-            }
-
-            // 기존 교실 위에 마우스가 있는지 확인
-            let foundRoom = null;
-            rooms.forEach(room => {
-                if (x >= room.x && x <= room.x + room.width &&
-                    y >= room.y && y <= room.y + room.height) {
-                    foundRoom = room;
+                    // 장비 표시
+                    room.devices.forEach((device, index) => {
+                        ctx.fillStyle = '#ff0000';
+                        ctx.beginPath();
+                        ctx.arc(room.x + 20 + (index * 15), room.y + 20, 5, 0, Math.PI * 2);
+                        ctx.fill();
+                    });
                 }
             });
-
-            if (foundRoom) {
-                infoPanel.style.display = 'block';
-                infoPanel.style.left = e.clientX + 10 + 'px';
-                infoPanel.style.top = e.clientY + 10 + 'px';
-                
-                roomName.textContent = foundRoom.name;
-                deviceList.innerHTML = foundRoom.devices.map(d => 
-                    `<div class="device-item">${d.manageNo} - ${d.type}</div>`
-                ).join('');
-            } else {
-                infoPanel.style.display = 'none';
-            }
-        });
-
-        canvas.addEventListener('mouseup', (e) => {
-            if (!isDrawing || !startX || !startY) return;
-
-            const rect = canvas.getBoundingClientRect();
-            const endX = e.clientX - rect.left;
-            const endY = e.clientY - rect.top;
-
-            const roomName = prompt('교실 이름을 입력하세요:');
-            if (roomName) {
-                rooms.set(roomName, {
-                    name: roomName,
-                    x: Math.min(startX, endX),
-                    y: Math.min(startY, endY),
-                    width: Math.abs(endX - startX),
-                    height: Math.abs(endY - startY),
-                    devices: []
-                });
-            }
-
-            isDrawing = false;
-            startX = null;
-            startY = null;
-            canvas.style.cursor = 'default';
-            drawLayout();
-        });
+        }
 
         // 드래그 앤 드롭 이벤트 처리
         canvas.addEventListener('dragover', (e) => {
@@ -327,26 +319,95 @@
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
 
+            // 그리드에 맞춤
+            const gridX = Math.round(x / ROOM_WIDTH) * ROOM_WIDTH;
+            const gridY = Math.round(y / ROOM_HEIGHT) * ROOM_HEIGHT;
+
             rooms.set(draggedRoom.roomName, {
                 id: draggedRoom.classroomId,
                 name: draggedRoom.roomName,
-                x: x,
-                y: y,
-                width: 150,
-                height: 100,
-                devices: devices.filter(device => device.classroom && device.classroom.classroomId === draggedRoom.classroomId)
+                x: gridX,
+                y: gridY,
+                width: ROOM_WIDTH,
+                height: ROOM_HEIGHT,
+                building: currentBuilding,
+                floor: currentFloor,
+                devices: devices.filter(device => 
+                    device.classroom && device.classroom.classroomId === draggedRoom.classroomId
+                )
             });
 
-            // 드래그된 교실의 좌표 업데이트
-            draggedRoom.xCoordinate = x;
-            draggedRoom.yCoordinate = y;
-            draggedRoom.width = 150;
-            draggedRoom.height = 100;
-
-            // 미배치 목록 업데이트
             updateUnplacedRoomsList();
             drawLayout();
             draggedRoom = null;
+        });
+
+        // 마우스 이벤트 처리
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            // 기존 교실 선택
+            rooms.forEach(room => {
+                if (room.building === currentBuilding && 
+                    room.floor === currentFloor &&
+                    mouseX >= room.x && mouseX <= room.x + room.width &&
+                    mouseY >= room.y && mouseY <= room.y + room.height) {
+                    selectedRoom = room;
+                    isDragging = true;
+                    dragOffsetX = mouseX - room.x;
+                    dragOffsetY = mouseY - room.y;
+                }
+            });
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            if (isDragging && selectedRoom) {
+                // 그리드에 맞춤
+                const gridX = Math.round((mouseX - dragOffsetX) / ROOM_WIDTH) * ROOM_WIDTH;
+                const gridY = Math.round((mouseY - dragOffsetY) / ROOM_HEIGHT) * ROOM_HEIGHT;
+
+                selectedRoom.x = Math.max(0, Math.min(gridX, canvas.width - ROOM_WIDTH));
+                selectedRoom.y = Math.max(0, Math.min(gridY, canvas.height - ROOM_HEIGHT));
+
+                rooms.set(selectedRoom.name, selectedRoom);
+                drawLayout();
+                canvas.style.cursor = 'move';
+            }
+
+            // 마우스 오버 효과
+            let isOverRoom = false;
+            rooms.forEach(room => {
+                if (room.building === currentBuilding && 
+                    room.floor === currentFloor &&
+                    mouseX >= room.x && mouseX <= room.x + room.width &&
+                    mouseY >= room.y && mouseY <= room.y + room.height) {
+                    isOverRoom = true;
+                    infoPanel.style.display = 'block';
+                    infoPanel.style.left = e.clientX + 10 + 'px';
+                    infoPanel.style.top = e.clientY + 10 + 'px';
+                    roomName.textContent = room.name;
+                    deviceList.innerHTML = room.devices.map(d => 
+                        `<div class="device-item">${d.manageNo} - ${d.type}</div>`
+                    ).join('');
+                }
+            });
+
+            if (!isOverRoom && !isDragging) {
+                infoPanel.style.display = 'none';
+                canvas.style.cursor = 'default';
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            isDragging = false;
+            selectedRoom = null;
+            canvas.style.cursor = 'default';
         });
 
         // 레이아웃 저장
@@ -363,7 +424,9 @@
                     xCoordinate: room.x,
                     yCoordinate: room.y,
                     width: room.width,
-                    height: room.height
+                    height: room.height,
+                    building: room.building,
+                    floor: room.floor
                 }));
 
                 const response = await fetch('/device/api/save-layout', {
@@ -384,6 +447,10 @@
                 alert('레이아웃 저장 중 오류가 발생했습니다.');
             }
         }
+
+        // 초기화
+        createBuildingTabs();
+        createFloorButtons();
     </script>
 </body>
 </html> 
