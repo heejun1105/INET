@@ -33,7 +33,30 @@
                             <td class="need">관리번호</td>
                         </tr>
                         <tr>
-                            <td><input type="text" th:field="*{manageNo}"></td>
+                            <td>
+                                <div style="display: flex; gap: 8px;">
+                                    <select id="manageCateSelect" name="manageCate" required>
+                                        <option value="">구분 선택</option>
+                                        <!-- JS로 옵션 동적 로딩 -->
+                                        <option value="custom">직접입력</option>
+                                    </select>
+                                    <input type="text" id="manageCateInput" name="manageCateCustom" placeholder="구분 직접입력" style="display:none; width: 80px;">
+
+                                    <select id="manageYearSelect" name="manageYear" required>
+                                        <option value="">연도 선택</option>
+                                        <!-- JS로 옵션 동적 로딩 -->
+                                        <option value="custom">직접입력</option>
+                                    </select>
+                                    <input type="text" id="manageYearInput" name="manageYearCustom" placeholder="연도 직접입력" style="display:none; width: 60px;">
+
+                                    <select id="manageNumSelect" name="manageNum" required>
+                                        <option value="">번호 선택</option>
+                                        <!-- JS로 옵션 동적 로딩 -->
+                                        <option value="custom">직접입력</option>
+                                    </select>
+                                    <input type="text" id="manageNumInput" name="manageNumCustom" placeholder="번호 직접입력" style="display:none; width: 60px;">
+                                </div>
+                            </td>
                         </tr>
 
                         <tr>

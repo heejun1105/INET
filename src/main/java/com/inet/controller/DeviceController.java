@@ -11,6 +11,7 @@ import com.inet.service.DeviceService;
 import com.inet.service.SchoolService;
 import com.inet.service.OperatorService;
 import com.inet.service.ClassroomService;
+import com.inet.service.ManageService;
 import com.inet.config.Views;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -29,6 +30,7 @@ import java.io.IOException;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import com.fasterxml.jackson.annotation.JsonView;
+import com.inet.entity.Manage;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,11 +45,12 @@ public class DeviceController {
     private final SchoolService schoolService;
     private final OperatorService operatorService;
     private final ClassroomService classroomService;
+    private final ManageService manageService;
 
     @GetMapping("/list")
     public String list(@RequestParam(required = false) Long schoolId,
                       @RequestParam(required = false) String type,
-                      @RequestParam(required = false) String roomName,
+                      @RequestParam(required = false) Long classroomId,
                       @RequestParam(defaultValue = "1") int page,
                       @RequestParam(defaultValue = "10") int size,
                       Model model) {
@@ -56,10 +59,17 @@ public class DeviceController {
         model.addAttribute("types", deviceService.getAllTypes());
         model.addAttribute("selectedSchoolId", schoolId);
         model.addAttribute("selectedType", type);
-        model.addAttribute("selectedRoomName", roomName);
+        model.addAttribute("selectedClassroomId", classroomId);
+
+        // 선택된 학교의 교실 목록 조회
+        if (schoolId != null) {
+            model.addAttribute("classrooms", classroomService.findBySchoolId(schoolId));
+        } else {
+            model.addAttribute("classrooms", classroomService.getAllClassrooms());
+        }
 
         Pageable pageable = PageRequest.of(page - 1, size);
-        Page<Device> devicePage = deviceService.getDevices(schoolId, type, pageable);
+        Page<Device> devicePage = deviceService.getDevices(schoolId, type, classroomId, pageable);
         int totalPages = devicePage.getTotalPages();
         int currentPage = page;
         int startPage = ((currentPage - 1) / 10) * 10 + 1;
@@ -83,43 +93,51 @@ public class DeviceController {
     }
 
     @PostMapping("/register")
-    public String register(Device device, String operatorName, String operatorPosition, String location) {
+    public String register(Device device, String operatorName, String operatorPosition, String location,
+                          String manageCate, String manageCateCustom, String manageYear, String manageYearCustom, String manageNum, String manageNumCustom) {
         log.info("Registering device: {}", device);
-        
         // 학교 정보 가져오기
         School school = device.getSchool();
         if (school == null) {
             throw new IllegalArgumentException("학교 정보가 필요합니다.");
         }
-        
-        // 위치 정보로 교실 생성 또는 찾기
-        if (location == null || location.trim().isEmpty()) {
+        // Operator 처리
+        Operator operator = null;
+        if (operatorName != null && operatorPosition != null) {
+            operator = operatorService.findByNameAndPositionAndSchool(operatorName, operatorPosition, school)
+                .orElseGet(() -> {
+                    Operator op = new Operator();
+                    op.setName(operatorName);
+                    op.setPosition(operatorPosition);
+                    op.setSchool(school);
+                    return operatorService.saveOperator(op);
+                });
+        }
+        device.setOperator(operator);
+        // Classroom 처리
+        Classroom classroom = null;
+        if (location != null && !location.trim().isEmpty()) {
+            classroom = classroomService.findByRoomName(location);
+            if (classroom == null) {
+                classroom = new Classroom();
+                classroom.setRoomName(location);
+                classroom.setSchool(school);
+                classroom.setXCoordinate(0);
+                classroom.setYCoordinate(0);
+                classroom.setWidth(100);
+                classroom.setHeight(100);
+                classroom = classroomService.saveClassroom(classroom);
+            }
+        } else {
             throw new IllegalArgumentException("위치 정보가 필요합니다.");
         }
-        
-        Classroom classroom = classroomService.findByRoomName(location);
-        if (classroom == null) {
-            classroom = new Classroom();
-            classroom.setRoomName(location);
-            classroom.setSchool(school);
-            classroom.setXCoordinate(0);
-            classroom.setYCoordinate(0);
-            classroom.setWidth(100);
-            classroom.setHeight(100);
-            classroom = classroomService.saveClassroom(classroom);
-        }
         device.setClassroom(classroom);
-        
-        // 담당자 정보 저장
-        Operator operator = new Operator();
-        operator.setName(operatorName);
-        operator.setPosition(operatorPosition);
-        operator.setSchool(school); // 학교 정보 설정
-        operatorService.saveOperator(operator);
-        
-        // 장비에 담당자 정보 연결
-        device.setOperator(operator);
-        
+        // 관리번호(Manage) 처리
+        String cate = ("custom".equals(manageCate)) ? manageCateCustom : manageCate;
+        Integer year = ("custom".equals(manageYear)) ? Integer.valueOf(manageYearCustom) : Integer.valueOf(manageYear);
+        Long num = ("custom".equals(manageNum)) ? Long.valueOf(manageNumCustom) : Long.valueOf(manageNum);
+        Manage manage = manageService.findOrCreate(device.getSchool(), cate, year, num);
+        device.setManage(manage);
         deviceService.saveDevice(device);
         return "redirect:/device/list";
     }
@@ -133,42 +151,52 @@ public class DeviceController {
     }
 
     @PostMapping("/modify")
-    public String modify(Device device, String operatorName, String operatorPosition, String location) {
+    public String modify(Device device, String operatorName, String operatorPosition, String location,
+                        String manageCate, String manageCateCustom, String manageYear, String manageYearCustom, String manageNum, String manageNumCustom) {
         log.info("Modifying device: {}", device);
-        
-        // 학교 정보 가져오기
         School school = device.getSchool();
-        
-        // 위치 정보로 교실 생성 또는 찾기
-        Classroom classroom = classroomService.findByRoomName(location);
-        if (classroom == null) {
-            classroom = new Classroom();
-            classroom.setRoomName(location);
-            classroom.setSchool(school);
-            classroom.setXCoordinate(0);
-            classroom.setYCoordinate(0);
-            classroom.setWidth(100);
-            classroom.setHeight(100);
-            classroom = classroomService.saveClassroom(classroom);
+        // Operator 처리
+        Operator operator = device.getOperator();
+        if (operatorName != null && operatorPosition != null) {
+            if (operator != null) {
+                operator.setName(operatorName);
+                operator.setPosition(operatorPosition);
+                operator.setSchool(school);
+                operatorService.updateOperator(operator);
+            } else {
+                operator = operatorService.findByNameAndPositionAndSchool(operatorName, operatorPosition, school)
+                    .orElseGet(() -> {
+                        Operator op = new Operator();
+                        op.setName(operatorName);
+                        op.setPosition(operatorPosition);
+                        op.setSchool(school);
+                        return operatorService.saveOperator(op);
+                    });
+                device.setOperator(operator);
+            }
+        }
+        // Classroom 처리
+        Classroom classroom = null;
+        if (location != null && !location.trim().isEmpty()) {
+            classroom = classroomService.findByRoomName(location);
+            if (classroom == null) {
+                classroom = new Classroom();
+                classroom.setRoomName(location);
+                classroom.setSchool(school);
+                classroom.setXCoordinate(0);
+                classroom.setYCoordinate(0);
+                classroom.setWidth(100);
+                classroom.setHeight(100);
+                classroom = classroomService.saveClassroom(classroom);
+            }
         }
         device.setClassroom(classroom);
-        
-        // 담당자 정보 업데이트
-        Operator operator = device.getOperator();
-        if (operator != null) {
-            operator.setName(operatorName);
-            operator.setPosition(operatorPosition);
-            operator.setSchool(school); // 학교 정보 업데이트
-            operatorService.updateOperator(operator);
-        } else {
-            operator = new Operator();
-            operator.setName(operatorName);
-            operator.setPosition(operatorPosition);
-            operator.setSchool(school); // 학교 정보 설정
-            operatorService.saveOperator(operator);
-            device.setOperator(operator);
-        }
-        
+        // 관리번호(Manage) 처리
+        String cate = ("custom".equals(manageCate)) ? manageCateCustom : manageCate;
+        Integer year = ("custom".equals(manageYear)) ? Integer.valueOf(manageYearCustom) : Integer.valueOf(manageYear);
+        Long num = ("custom".equals(manageNum)) ? Long.valueOf(manageNumCustom) : Long.valueOf(manageNum);
+        Manage manage = manageService.findOrCreate(device.getSchool(), cate, year, num);
+        device.setManage(manage);
         deviceService.updateDevice(device);
         return "redirect:/device/list";
     }
@@ -184,15 +212,22 @@ public class DeviceController {
     public void downloadExcel(
             @RequestParam(required = false) Long schoolId,
             @RequestParam(required = false) String type,
+            @RequestParam(required = false) Long classroomId,
             HttpServletResponse response) throws IOException {
         List<Device> devices;
         
-        if (schoolId != null && type != null && !type.isEmpty()) {
+        if (schoolId != null && type != null && !type.isEmpty() && classroomId != null) {
+            devices = deviceService.findBySchoolAndTypeAndClassroom(schoolId, type, classroomId);
+        } else if (schoolId != null && type != null && !type.isEmpty()) {
             devices = deviceService.findBySchoolAndType(schoolId, type);
+        } else if (schoolId != null && classroomId != null) {
+            devices = deviceService.findBySchoolAndClassroom(schoolId, classroomId);
         } else if (schoolId != null) {
             devices = deviceService.findBySchool(schoolId);
         } else if (type != null && !type.isEmpty()) {
             devices = deviceService.findByType(type);
+        } else if (classroomId != null) {
+            devices = deviceService.findByClassroom(classroomId);
         } else {
             devices = deviceService.findAll();
         }
@@ -250,5 +285,11 @@ public class DeviceController {
             log.error("레이아웃 저장 중 오류 발생", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
+
+    @GetMapping("/api/manages/{schoolId}")
+    @ResponseBody
+    public List<Manage> getManagesBySchool(@PathVariable Long schoolId) {
+        return manageService.findBySchoolId(schoolId);
     }
 } 

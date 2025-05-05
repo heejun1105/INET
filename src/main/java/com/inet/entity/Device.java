@@ -23,9 +23,6 @@ public class Device {
     @Column(name = "device_id")
     private Long deviceId;
     
-    @Column(name = "manage_no")
-    private String manageNo;
-    
     private String type;
     
     private String manufacturer;
@@ -44,7 +41,7 @@ public class Device {
     @JsonBackReference
     private Classroom classroom;
     
-    private String purpose;
+    private String purpose; 
     
     @Column(name = "set_type")
     private String setType;
@@ -61,4 +58,8 @@ public class Device {
     @ManyToOne
     @JoinColumn(name = "operator_id")
     private Operator operator;
+    
+    @ManyToOne
+    @JoinColumn(name = "manage_id")
+    private Manage manage;
 } 

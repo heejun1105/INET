@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>장비 등록</title>
-    <link rel="stylesheet" href="/device.css" />
+    <link rel="stylesheet" href="/device.css">
 </head>
 <body>
     <div class="container">
@@ -11,20 +11,23 @@
             <div class="title">
                 <div class="subject">장비 등록</div>
                 <div class="subtitle">새로운 장비 정보를 입력해 주세요.</div>
+                <div style="margin-top:10px;">
+                    <a href="/device/upload" class="sub-but" style="background-color:#28a745; color:white; padding:6px 16px; border-radius:4px; text-decoration:none;">엑셀 업로드</a>
+                </div>
             </div>
             <div class="main">
-                <form th:action="@{/device/register}" method="post" th:object="${device}">
+                <form id="deviceForm" th:action="@{/device/register}" th:object="${device}" method="post">
                     <table class="sign_table">
                         <tr>
                             <td class="need">학교</td>
                         </tr>
                         <tr>
                             <td>
-                                <select th:field="*{school}" required>
-                                    <option value="">학교 선택</option>
+                                <select name="school" th:field="*{school}" class="form-select">
                                     <option th:each="school : ${schools}" 
                                             th:value="${school.schoolId}" 
-                                            th:text="${school.schoolName}"></option>
+                                            th:text="${school.schoolName}">
+                                    </option>
                                 </select>
                             </td>
                         </tr>
@@ -33,7 +36,27 @@
                             <td>관리번호</td>
                         </tr>
                         <tr>
-                            <td><input type="text" th:field="*{manageNo}"></td>
+                            <td>
+                                <div style="display: flex; gap: 8px;">
+                                    <select id="manageCate" name="manageCate" required>
+                                        <option value="">선택하세요</option>
+                                        <option value="custom">직접입력</option>
+                                    </select>
+                                    <input type="text" id="manageCateInput" name="manageCateCustom" placeholder="구분 직접입력" style="display:none; width: 80px;">
+
+                                    <select id="year" name="manageYear">
+                                        <option value="">선택하세요</option>
+                                        <option value="custom">직접입력</option>
+                                    </select>
+                                    <input type="text" id="manageYearInput" name="manageYearCustom" placeholder="연도 직접입력" style="display:none; width: 60px;">
+
+                                    <select id="manageNum" name="manageNum" required>
+                                        <option value="">선택하세요</option>
+                                        <option value="custom">직접입력</option>
+                                    </select>
+                                    <input type="number" id="manageNumInput" name="manageNumCustom" placeholder="번호 직접입력" style="display:none; width: 60px;">
+                                </div>
+                            </td>
                         </tr>
 
                         <tr>
@@ -136,5 +159,6 @@
             </div>
         </div>
     </div>
+    <script src="/js/device/register.js"></script>
 </body>
 </html> 

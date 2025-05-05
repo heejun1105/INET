@@ -4,6 +4,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.inet.entity.Operator;
 import com.inet.repository.OperatorRepository;
+import com.inet.entity.School;
 
 import java.util.List;
 import java.util.Optional;
@@ -44,5 +45,9 @@ public class OperatorService {
     public void deleteOperator(Long id) {
         log.info("Deleting operator with id: {}", id);
         operatorRepository.deleteById(id);
+    }
+
+    public Optional<Operator> findByNameAndPositionAndSchool(String name, String position, School school) {
+        return operatorRepository.findByNameAndPositionAndSchool(name, position, school);
     }
 } 
