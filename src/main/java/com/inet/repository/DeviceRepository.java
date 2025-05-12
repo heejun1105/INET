@@ -3,6 +3,7 @@ package com.inet.repository;
 import com.inet.entity.Device;
 import com.inet.entity.School;
 import com.inet.entity.Classroom;
+import com.inet.entity.Uid;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -11,6 +12,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface DeviceRepository extends JpaRepository<Device, Long> {
@@ -41,4 +43,8 @@ public interface DeviceRepository extends JpaRepository<Device, Long> {
     List<Device> findBySchoolSchoolIdAndType(Long schoolId, String type);
 
     List<Device> findByClassroomRoomName(String roomName);
+    
+    // Uid 관련 검색
+    Optional<Device> findByUid(Uid uid);
+    List<Device> findByUidCate(String cate);
 } 

@@ -1,0 +1,38 @@
+package com.inet.repository;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import com.inet.entity.Uid;
+import com.inet.entity.School;
+
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public interface UidRepository extends JpaRepository<Uid, Long> {
+    
+    // cate로 검색
+    List<Uid> findByCate(String cate);
+    
+    // cate와 idNumber로 검색
+    Optional<Uid> findByCateAndIdNumber(String cate, Long idNumber);
+    
+    // cate별 idNumber 최대값 조회
+    Optional<Uid> findTopByCateOrderByIdNumberDesc(String cate);
+    
+    // cate 존재 여부 확인
+    boolean existsByCate(String cate);
+    
+    // 학교별 Uid 검색
+    List<Uid> findBySchool(School school);
+    
+    // 학교와 cate로 Uid 검색
+    List<Uid> findBySchoolAndCate(School school, String cate);
+    
+    // 학교와 cate별 idNumber 최대값 조회
+    Optional<Uid> findTopBySchoolAndCateOrderByIdNumberDesc(School school, String cate);
+    
+    // 학교, 카테고리, ID 번호로 Uid 검색
+    Optional<Uid> findBySchoolAndCateAndIdNumber(School school, String cate, Long idNumber);
+} 

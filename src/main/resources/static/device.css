@@ -179,6 +179,54 @@ input:focus, textarea:focus, select:focus {
     gap: 8px;
 }
 
+/* 교실 헤더 스타일 */
+.device-table tr.classroom-header {
+    background-color: #2d3a4b !important;
+    border-top: 1px solid #1a2533;
+}
+
+.device-table tr.classroom-header td {
+    padding: 14px 15px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.device-table tr.classroom-header strong {
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff;
+}
+
+/* 그룹 헤더 스타일 */
+.device-table tr.group-header {
+    background-color: #eaeef2 !important;
+    border-top: 1px solid #ccc;
+}
+
+.device-table tr.group-header td {
+    padding: 12px 15px;
+    font-weight: 600;
+    color: #2d3436;
+}
+
+.device-table tr.group-header strong {
+    font-size: 14px;
+    font-weight: 700;
+    color: #3d96ff;
+}
+
+.device-table tr.group-item {
+    border-left: 3px solid transparent;
+}
+
+.device-table tr.set-group-item {
+    border-left: 3px solid #3d96ff;
+}
+
+.device-table tr.operator-group-item {
+    border-left: 3px solid #ffa502;
+}
+
 .action-buttons button, .action-buttons a {
     padding: 6px 12px;
     border: none;

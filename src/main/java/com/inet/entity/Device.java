@@ -9,6 +9,8 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Column;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import java.time.LocalDate;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonBackReference;
@@ -62,4 +64,8 @@ public class Device {
     @ManyToOne
     @JoinColumn(name = "manage_id")
     private Manage manage;
+    
+    @ManyToOne
+    @JoinColumn(name = "uid_id")
+    private Uid uid;
 } 

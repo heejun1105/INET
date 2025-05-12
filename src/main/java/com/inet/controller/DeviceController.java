@@ -31,6 +31,8 @@ import java.util.Map;
 import org.springframework.http.HttpStatus;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.inet.entity.Manage;
+import com.inet.service.UidService;
+import com.inet.entity.Uid;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -46,6 +48,7 @@ public class DeviceController {
     private final OperatorService operatorService;
     private final ClassroomService classroomService;
     private final ManageService manageService;
+    private final UidService uidService;
 
     @GetMapping("/list")
     public String list(@RequestParam(required = false) Long schoolId,
@@ -70,12 +73,67 @@ public class DeviceController {
 
         Pageable pageable = PageRequest.of(page - 1, size);
         Page<Device> devicePage = deviceService.getDevices(schoolId, type, classroomId, pageable);
+        
+        // 장비 목록 그룹화 (교실별 > 세트타입/담당자별)
+        Map<String, Map<String, List<Device>>> devicesByClassroom;
+        
+        // 특정 교실이 선택된 경우에도 세트타입/담당자별로 그룹화
+        if (classroomId != null) {
+            // 교실이 선택된 경우: 선택된 교실 내에서 세트타입/담당자별로만 그룹화
+            String classroomName = devicePage.getContent().isEmpty() ? "선택된 교실" : 
+                                  (devicePage.getContent().get(0).getClassroom() != null && 
+                                   devicePage.getContent().get(0).getClassroom().getRoomName() != null ? 
+                                   devicePage.getContent().get(0).getClassroom().getRoomName() : "미지정 교실");
+            
+            Map<String, List<Device>> groupsInClassroom = devicePage.getContent().stream()
+                .collect(java.util.stream.Collectors.groupingBy(device -> {
+                    // 세트 타입 또는 담당자별로 그룹화
+                    String setType = device.getSetType();
+                    if (setType != null && !setType.trim().isEmpty()) {
+                        return "SET:" + setType;
+                    } else {
+                        Operator operator = device.getOperator();
+                        if (operator != null && operator.getName() != null) {
+                            return "OP:" + operator.getName();
+                        } else {
+                            return "OTHER";
+                        }
+                    }
+                }));
+            
+            // 단일 교실에 대한 맵 생성
+            devicesByClassroom = new java.util.HashMap<>();
+            devicesByClassroom.put(classroomName, groupsInClassroom);
+        } else {
+            // 교실이 선택되지 않은 경우: 교실별 > 세트타입/담당자별 그룹화
+            devicesByClassroom = devicePage.getContent().stream()
+                .collect(java.util.stream.Collectors.groupingBy(device -> {
+                    // 교실 이름으로 그룹화 (없으면 "미지정 교실"로 분류)
+                    Classroom classroom = device.getClassroom();
+                    return classroom != null && classroom.getRoomName() != null ? classroom.getRoomName() : "미지정 교실";
+                }, java.util.stream.Collectors.groupingBy(device -> {
+                    // 각 교실 내에서 세트 타입 또는 담당자별로 그룹화
+                    String setType = device.getSetType();
+                    if (setType != null && !setType.trim().isEmpty()) {
+                        return "SET:" + setType;
+                    } else {
+                        Operator operator = device.getOperator();
+                        if (operator != null && operator.getName() != null) {
+                            return "OP:" + operator.getName();
+                        } else {
+                            return "OTHER";
+                        }
+                    }
+                })));
+        }
+
         int totalPages = devicePage.getTotalPages();
         int currentPage = page;
         int startPage = ((currentPage - 1) / 10) * 10 + 1;
         int endPage = Math.min(startPage + 9, totalPages);
 
         model.addAttribute("devicePage", devicePage);
+        model.addAttribute("devicesByClassroom", devicesByClassroom); // 교실별로 그룹화된 장비 목록 추가
         model.addAttribute("currentPage", currentPage);
         model.addAttribute("pageSize", size);
         model.addAttribute("startPage", startPage);
@@ -94,7 +152,8 @@ public class DeviceController {
 
     @PostMapping("/register")
     public String register(Device device, String operatorName, String operatorPosition, String location,
-                          String manageCate, String manageCateCustom, String manageYear, String manageYearCustom, String manageNum, String manageNumCustom) {
+                          String manageCate, String manageCateCustom, String manageYear, String manageYearCustom, String manageNum, String manageNumCustom,
+                          String uidCate) {
         log.info("Registering device: {}", device);
         // 학교 정보 가져오기
         School school = device.getSchool();
@@ -138,6 +197,10 @@ public class DeviceController {
         Long num = ("custom".equals(manageNum)) ? Long.valueOf(manageNumCustom) : Long.valueOf(manageNum);
         Manage manage = manageService.findOrCreate(device.getSchool(), cate, year, num);
         device.setManage(manage);
+        // Uid 처리
+        if (uidCate != null && !uidCate.trim().isEmpty()) {
+            deviceService.setDeviceUid(device, uidCate);
+        }
         deviceService.saveDevice(device);
         return "redirect:/device/list";
     }
@@ -152,7 +215,8 @@ public class DeviceController {
 
     @PostMapping("/modify")
     public String modify(Device device, String operatorName, String operatorPosition, String location,
-                        String manageCate, String manageCateCustom, String manageYear, String manageYearCustom, String manageNum, String manageNumCustom) {
+                        String manageCate, String manageCateCustom, String manageYear, String manageYearCustom, String manageNum, String manageNumCustom,
+                        String uidCate, Long idNumber) {
         log.info("Modifying device: {}", device);
         School school = device.getSchool();
         // Operator 처리
@@ -197,6 +261,14 @@ public class DeviceController {
         Long num = ("custom".equals(manageNum)) ? Long.valueOf(manageNumCustom) : Long.valueOf(manageNum);
         Manage manage = manageService.findOrCreate(device.getSchool(), cate, year, num);
         device.setManage(manage);
+        // Uid 처리
+        if (uidCate != null && !uidCate.trim().isEmpty()) {
+            if (idNumber != null) {
+                deviceService.setDeviceUidWithNumber(device, uidCate, idNumber);
+            } else {
+                deviceService.setDeviceUid(device, uidCate);
+            }
+        }
         deviceService.updateDevice(device);
         return "redirect:/device/list";
     }
@@ -231,6 +303,37 @@ public class DeviceController {
         } else {
             devices = deviceService.findAll();
         }
+        
+        // 교실, 세트 타입, 담당자 순으로 정렬
+        devices.sort((d1, d2) -> {
+            // 1. 교실 기준 정렬
+            String classroom1 = d1.getClassroom() != null && d1.getClassroom().getRoomName() != null ? 
+                                d1.getClassroom().getRoomName() : "미지정 교실";
+            String classroom2 = d2.getClassroom() != null && d2.getClassroom().getRoomName() != null ? 
+                                d2.getClassroom().getRoomName() : "미지정 교실";
+            int classroomCompare = classroom1.compareTo(classroom2);
+            if (classroomCompare != 0) return classroomCompare;
+            
+            // 2. 세트 타입 기준 정렬 (있는 경우)
+            String setType1 = d1.getSetType() != null && !d1.getSetType().trim().isEmpty() ? d1.getSetType() : null;
+            String setType2 = d2.getSetType() != null && !d2.getSetType().trim().isEmpty() ? d2.getSetType() : null;
+            
+            // 세트 타입이 있는 경우 우선 정렬
+            if (setType1 != null && setType2 != null) {
+                return setType1.compareTo(setType2);
+            } else if (setType1 != null) {
+                return -1; // d1이 세트 타입이 있으면 앞으로
+            } else if (setType2 != null) {
+                return 1;  // d2가 세트 타입이 있으면 앞으로
+            }
+            
+            // 3. 담당자 기준 정렬
+            String operator1 = d1.getOperator() != null && d1.getOperator().getName() != null ? 
+                               d1.getOperator().getName() : "미지정 담당자";
+            String operator2 = d2.getOperator() != null && d2.getOperator().getName() != null ? 
+                               d2.getOperator().getName() : "미지정 담당자";
+            return operator1.compareTo(operator2);
+        });
         
         response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         response.setHeader("Content-Disposition", "attachment; filename=devices.xlsx");

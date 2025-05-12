@@ -48,6 +48,7 @@
                 <table class="device-table">
                     <thead>
                         <tr>
+                            <th>고유번호</th>
                             <th>관리번호</th>
                             <th>유형</th>
                             <th>제조사</th>
@@ -66,31 +67,54 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr th:each="device : ${devicePage.content}">
-                            <td th:text="${device.manage != null ? (device.manage.manageCate != null ? device.manage.manageCate : '') + (device.manage.year != null ? '-' + device.manage.year : '') + (device.manage.manageNum != null ? '-' + device.manage.manageNum : '') : ''}"></td>
-                            <td th:text="${device.type != null ? device.type : ''}"></td>
-                            <td th:text="${device.manufacturer != null ? device.manufacturer : ''}"></td>
-                            <td th:text="${device.modelName != null ? device.modelName : ''}"></td>
-                            <td th:text="${device.purchaseDate != null ? device.purchaseDate : ''}"></td>
-                            <td th:text="${device.ipAddress != null ? device.ipAddress : ''}"></td>
-                            <td th:text="${device.classroom != null && device.classroom.roomName != null ? device.classroom.roomName : ''}"></td>
-                            <td th:text="${device.purpose != null ? device.purpose : ''}"></td>
-                            <td th:text="${device.setType != null ? device.setType : ''}"></td>
-                            <td th:text="${device.school != null && device.school.schoolName != null ? device.school.schoolName : ''}"></td>
-                            <td th:text="${device.operator != null && device.operator.name != null ? device.operator.name : ''}"></td>
-                            <td th:text="${device.operator != null && device.operator.position != null ? device.operator.position : ''}"></td>
-                            <td th:text="${device.unused != null && device.unused ? '예' : '아니오'}"></td>
-                            <td th:text="${device.note != null ? device.note : ''}"></td>
-                            <td>
-                                <div class="action-buttons">
-                                    <a th:href="@{/device/modify/{id}(id=${device.deviceId})}" class="btn-warning">수정</a>
-                                    <form th:action="@{/device/remove}" method="post" style="display: inline;">
-                                        <input type="hidden" name="device_id" th:value="${device.deviceId}">
-                                        <button type="submit" class="btn-danger" onclick="return confirm('정말 삭제하시겠습니까?')">삭제</button>
-                                    </form>
-                                </div>
-                            </td>
-                        </tr>
+                        <!-- 교실별로 장비 목록 출력 -->
+                        <th:block th:each="classroomEntry : ${devicesByClassroom}">
+                            <!-- 교실 헤더 -->
+                            <tr class="classroom-header">
+                                <td colspan="16">
+                                    <strong th:text="'교실: ' + ${classroomEntry.key}"></strong>
+                                </td>
+                            </tr>
+                            
+                            <!-- 각 교실 내 세트/담당자별 그룹 -->
+                            <th:block th:each="groupEntry : ${classroomEntry.value}">
+                                <!-- 그룹 헤더 (세트 타입 또는 담당자) -->
+                                <tr class="group-header">
+                                    <td colspan="16" th:with="prefix=${groupEntry.key.startsWith('SET:') ? '세트 타입: ' : (groupEntry.key.startsWith('OP:') ? '담당자: ' : '기타')}">
+                                        <strong th:text="${prefix} + ${groupEntry.key.startsWith('SET:') ? groupEntry.key.substring(4) : (groupEntry.key.startsWith('OP:') ? groupEntry.key.substring(3) : '')}"></strong>
+                                    </td>
+                                </tr>
+                                
+                                <!-- 그룹 내 장비 목록 -->
+                                <tr th:each="device : ${groupEntry.value}" 
+                                    th:class="${groupEntry.key.startsWith('SET:') ? 'set-group-item group-item' : (groupEntry.key.startsWith('OP:') ? 'operator-group-item group-item' : 'group-item')}">
+                                    <td th:text="${device.uid != null ? device.uid.cate + device.uid.idNumber : ''}"></td>
+                                    <td th:text="${device.manage != null ? (device.manage.manageCate != null ? device.manage.manageCate : '') + (device.manage.year != null ? '-' + device.manage.year : '') + (device.manage.manageNum != null ? '-' + device.manage.manageNum : '') : ''}"></td>
+                                    <td th:text="${device.type != null ? device.type : ''}"></td>
+                                    <td th:text="${device.manufacturer != null ? device.manufacturer : ''}"></td>
+                                    <td th:text="${device.modelName != null ? device.modelName : ''}"></td>
+                                    <td th:text="${device.purchaseDate != null ? device.purchaseDate : ''}"></td>
+                                    <td th:text="${device.ipAddress != null ? device.ipAddress : ''}"></td>
+                                    <td th:text="${device.classroom != null && device.classroom.roomName != null ? device.classroom.roomName : ''}"></td>
+                                    <td th:text="${device.purpose != null ? device.purpose : ''}"></td>
+                                    <td th:text="${device.setType != null ? device.setType : ''}"></td>
+                                    <td th:text="${device.school != null && device.school.schoolName != null ? device.school.schoolName : ''}"></td>
+                                    <td th:text="${device.operator != null && device.operator.name != null ? device.operator.name : ''}"></td>
+                                    <td th:text="${device.operator != null && device.operator.position != null ? device.operator.position : ''}"></td>
+                                    <td th:text="${device.unused != null && device.unused ? '예' : '아니오'}"></td>
+                                    <td th:text="${device.note != null ? device.note : ''}"></td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <a th:href="@{/device/modify/{id}(id=${device.deviceId})}" class="btn-warning">수정</a>
+                                            <form th:action="@{/device/remove}" method="post" style="display: inline;">
+                                                <input type="hidden" name="device_id" th:value="${device.deviceId}">
+                                                <button type="submit" class="btn-danger" onclick="return confirm('정말 삭제하시겠습니까?')">삭제</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </th:block>
+                        </th:block>
                     </tbody>
                 </table>
                 <!-- 페이징 네비게이션 -->
