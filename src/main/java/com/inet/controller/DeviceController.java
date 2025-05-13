@@ -25,9 +25,12 @@ import java.io.ByteArrayOutputStream;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.LinkedHashMap;
+import java.util.stream.Collectors;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.Map;
 import org.springframework.http.HttpStatus;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.inet.entity.Manage;
@@ -71,70 +74,72 @@ public class DeviceController {
             model.addAttribute("classrooms", classroomService.getAllClassrooms());
         }
 
-        Pageable pageable = PageRequest.of(page - 1, size);
-        Page<Device> devicePage = deviceService.getDevices(schoolId, type, classroomId, pageable);
+        // 모든 장비를 가져와서 교실별로 정렬
+        List<Device> allDevices = deviceService.findFiltered(schoolId, type, classroomId);
         
-        // 장비 목록 그룹화 (교실별 > 세트타입/담당자별)
-        Map<String, Map<String, List<Device>>> devicesByClassroom;
+        // 교실별로 정렬 (교실명 기준)
+        allDevices.sort((d1, d2) -> {
+            String classroom1 = d1.getClassroom() != null && d1.getClassroom().getRoomName() != null ? 
+                             d1.getClassroom().getRoomName() : "미지정 교실";
+            String classroom2 = d2.getClassroom() != null && d2.getClassroom().getRoomName() != null ? 
+                             d2.getClassroom().getRoomName() : "미지정 교실";
+            return classroom1.compareTo(classroom2);
+        });
         
-        // 특정 교실이 선택된 경우에도 세트타입/담당자별로 그룹화
-        if (classroomId != null) {
-            // 교실이 선택된 경우: 선택된 교실 내에서 세트타입/담당자별로만 그룹화
-            String classroomName = devicePage.getContent().isEmpty() ? "선택된 교실" : 
-                                  (devicePage.getContent().get(0).getClassroom() != null && 
-                                   devicePage.getContent().get(0).getClassroom().getRoomName() != null ? 
-                                   devicePage.getContent().get(0).getClassroom().getRoomName() : "미지정 교실");
-            
-            Map<String, List<Device>> groupsInClassroom = devicePage.getContent().stream()
-                .collect(java.util.stream.Collectors.groupingBy(device -> {
-                    // 세트 타입 또는 담당자별로 그룹화
-                    String setType = device.getSetType();
-                    if (setType != null && !setType.trim().isEmpty()) {
-                        return "SET:" + setType;
-                    } else {
-                        Operator operator = device.getOperator();
-                        if (operator != null && operator.getName() != null) {
-                            return "OP:" + operator.getName();
-                        } else {
-                            return "OTHER";
-                        }
-                    }
-                }));
-            
-            // 단일 교실에 대한 맵 생성
-            devicesByClassroom = new java.util.HashMap<>();
-            devicesByClassroom.put(classroomName, groupsInClassroom);
-        } else {
-            // 교실이 선택되지 않은 경우: 교실별 > 세트타입/담당자별 그룹화
-            devicesByClassroom = devicePage.getContent().stream()
-                .collect(java.util.stream.Collectors.groupingBy(device -> {
-                    // 교실 이름으로 그룹화 (없으면 "미지정 교실"로 분류)
-                    Classroom classroom = device.getClassroom();
-                    return classroom != null && classroom.getRoomName() != null ? classroom.getRoomName() : "미지정 교실";
-                }, java.util.stream.Collectors.groupingBy(device -> {
-                    // 각 교실 내에서 세트 타입 또는 담당자별로 그룹화
-                    String setType = device.getSetType();
-                    if (setType != null && !setType.trim().isEmpty()) {
-                        return "SET:" + setType;
-                    } else {
-                        Operator operator = device.getOperator();
-                        if (operator != null && operator.getName() != null) {
-                            return "OP:" + operator.getName();
-                        } else {
-                            return "OTHER";
-                        }
-                    }
-                })));
+        // 교실별로 그룹화
+        Map<String, List<Device>> devicesByClassroom = allDevices.stream()
+            .collect(Collectors.groupingBy(device -> 
+                device.getClassroom() != null && device.getClassroom().getRoomName() != null ? 
+                device.getClassroom().getRoomName() : "미지정 교실",
+                LinkedHashMap::new, Collectors.toList()
+            ));
+        
+        // 각 교실 내에서 세트타입 > 담당자 순으로 정렬
+        for (List<Device> devices : devicesByClassroom.values()) {
+            devices.sort((d1, d2) -> {
+                // 세트타입 기준 정렬 (있으면 우선)
+                boolean hasSetType1 = d1.getSetType() != null && !d1.getSetType().trim().isEmpty();
+                boolean hasSetType2 = d2.getSetType() != null && !d2.getSetType().trim().isEmpty();
+                
+                if (hasSetType1 && hasSetType2) {
+                    int setTypeCompare = d1.getSetType().compareTo(d2.getSetType());
+                    if (setTypeCompare != 0) return setTypeCompare;
+                } else if (hasSetType1) {
+                    return -1; // d1만 세트타입이 있으면 앞으로
+                } else if (hasSetType2) {
+                    return 1;  // d2만 세트타입이 있으면 앞으로
+                }
+                
+                // 담당자 기준 정렬
+                String operator1 = d1.getOperator() != null && d1.getOperator().getName() != null ? 
+                                 d1.getOperator().getName() : "미지정 담당자";
+                String operator2 = d2.getOperator() != null && d2.getOperator().getName() != null ? 
+                                 d2.getOperator().getName() : "미지정 담당자";
+                return operator1.compareTo(operator2);
+            });
         }
-
-        int totalPages = devicePage.getTotalPages();
-        int currentPage = page;
-        int startPage = ((currentPage - 1) / 10) * 10 + 1;
+        
+        // 교실별 그룹을 페이징 처리를 위한 단일 리스트로 변환
+        List<Device> paginatedDevices = new ArrayList<>();
+        for (List<Device> classroomDevices : devicesByClassroom.values()) {
+            paginatedDevices.addAll(classroomDevices);
+        }
+        
+        // 페이징 처리
+        int totalDevices = paginatedDevices.size();
+        int totalPages = (int) Math.ceil((double) totalDevices / size);
+        int fromIndex = (page - 1) * size;
+        int toIndex = Math.min(fromIndex + size, totalDevices);
+        
+        List<Device> currentPageDevices = paginatedDevices.subList(fromIndex, toIndex);
+        
+        log.info("현재 페이지: {}, 장비 수: {}, 전체 장비 수: {}", page, currentPageDevices.size(), totalDevices);
+        
+        int startPage = ((page - 1) / 10) * 10 + 1;
         int endPage = Math.min(startPage + 9, totalPages);
 
-        model.addAttribute("devicePage", devicePage);
-        model.addAttribute("devicesByClassroom", devicesByClassroom); // 교실별로 그룹화된 장비 목록 추가
-        model.addAttribute("currentPage", currentPage);
+        model.addAttribute("devices", currentPageDevices);
+        model.addAttribute("currentPage", page);
         model.addAttribute("pageSize", size);
         model.addAttribute("startPage", startPage);
         model.addAttribute("endPage", endPage);

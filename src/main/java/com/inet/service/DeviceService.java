@@ -162,71 +162,178 @@ public class DeviceService {
     public void exportToExcel(List<Device> devices, OutputStream outputStream) throws IOException {
         Workbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("장비 목록");
-
-        // 기본 헤더 스타일
+        
+        // 1. 제목 스타일 (학교명 + 교실배치별 장비현황)
+        CellStyle titleStyle = workbook.createCellStyle();
+        Font titleFont = workbook.createFont();
+        titleFont.setBold(true);
+        titleFont.setFontHeightInPoints((short) 14);
+        titleStyle.setFont(titleFont);
+        titleStyle.setAlignment(HorizontalAlignment.CENTER);
+        
+        // 2. 날짜 스타일
+        CellStyle dateStyle = workbook.createCellStyle();
+        dateStyle.setAlignment(HorizontalAlignment.RIGHT);
+        Font dateFont = workbook.createFont();
+        dateFont.setBold(true);
+        dateStyle.setFont(dateFont);
+        
+        // 3. 헤더 스타일
         CellStyle headerStyle = workbook.createCellStyle();
         headerStyle.setAlignment(HorizontalAlignment.CENTER);
-
-        // 헤더 생성
-        Row headerRow = sheet.createRow(0);
-        String[] headers = {"고유번호", "관리번호", "종류", "직위", "취급자", "제조사", "모델명", "도입일자", "현IP주소", "설치장소", "용도", "세트분류", "비고"};
+        Font headerFont = workbook.createFont();
+        headerFont.setBold(true);
+        headerStyle.setFont(headerFont);
+        headerStyle.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
+        headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        headerStyle.setBorderTop(BorderStyle.THIN);
+        headerStyle.setBorderBottom(BorderStyle.THIN);
+        headerStyle.setBorderLeft(BorderStyle.THIN);
+        headerStyle.setBorderRight(BorderStyle.THIN);
+        
+        // 4. 데이터 스타일
+        CellStyle dataStyle = workbook.createCellStyle();
+        dataStyle.setBorderTop(BorderStyle.THIN);
+        dataStyle.setBorderBottom(BorderStyle.THIN);
+        dataStyle.setBorderLeft(BorderStyle.THIN);
+        dataStyle.setBorderRight(BorderStyle.THIN);
+        
+        // 학교명 가져오기 - 첫 번째 장비의 학교명 사용 (또는 선택된 학교명)
+        String schoolName = "학교";
+        if (!devices.isEmpty() && devices.get(0).getSchool() != null && devices.get(0).getSchool().getSchoolName() != null) {
+            schoolName = devices.get(0).getSchool().getSchoolName();
+        }
+        
+        // 현재 날짜 (작성일자)
+        String today = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+        
+        // 첫번째 행: 제목 (학교명 + 교실배치별 장비현황)
+        Row titleRow = sheet.createRow(0);
+        Cell titleCell = titleRow.createCell(0);
+        titleCell.setCellValue(schoolName + " 교실배치별 장비현황");
+        titleCell.setCellStyle(titleStyle);
+        sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 13)); // A1:N1 (비고 컬럼까지 병합)
+        
+        // 두번째 행: 작성일자
+        Row dateRow = sheet.createRow(1);
+        Cell dateCell = dateRow.createCell(12); // M2 셀
+        dateCell.setCellValue("작성일자");
+        dateCell.setCellStyle(dateStyle);
+        
+        Cell todayCell = dateRow.createCell(13); // N2 셀
+        todayCell.setCellValue(today);
+        todayCell.setCellStyle(dateStyle);
+        
+        // 세번째 행: 헤더
+        Row headerRow = sheet.createRow(2);
+        String[] headers = {"No", "고유번호", "관리번호", "종류", "직위", "취급자", "제조사", "모델명", "도입일자", "현IP주소", "설치장소", "용도", "세트분류", "비고"};
         for (int i = 0; i < headers.length; i++) {
             Cell cell = headerRow.createCell(i);
             cell.setCellValue(headers[i]);
             cell.setCellStyle(headerStyle);
         }
 
-        // 데이터 행
-        int rowNum = 1;
+        // 데이터 행 추가
+        int rowNum = 3; // 4번째 행부터 데이터 시작
         
         // 교실, 세트 타입, 담당자 순으로 정렬된 데이터 추가
-        for (Device device : devices) {
-            // 장비 데이터 행 추가
+        for (int i = 0; i < devices.size(); i++) {
+            Device device = devices.get(i);
             Row row = sheet.createRow(rowNum++);
             
-            // 고유번호
-            row.createCell(0).setCellValue(device.getUid() != null ? device.getUid().getCate() + device.getUid().getIdNumber() : "");
-            
-            // 관리번호
-            String manageNo = "";
-            Manage manage = device.getManage();
-            if (manage != null) {
-                String cate = manage.getManageCate() != null ? manage.getManageCate() : "";
-                String year = manage.getYear() != null ? manage.getYear().toString() : "";
-                String num = manage.getManageNum() != null ? manage.getManageNum().toString() : "";
-                manageNo = (cate + (year.isEmpty() ? "" : ("-" + year)) + (num.isEmpty() ? "" : ("-" + num))).replaceAll("-$", "");
+            // 각 열에 데이터 추가 및 스타일 적용
+            for (int col = 0; col < 14; col++) {
+                Cell cell = row.createCell(col);
+                cell.setCellStyle(dataStyle);
+                
+                // 각 열의 데이터 설정
+                switch (col) {
+                    case 0: // No (순번)
+                        cell.setCellValue(i + 1);
+                        break;
+                    case 1: // 고유번호
+                        cell.setCellValue(device.getUid() != null ? device.getUid().getCate() + device.getUid().getIdNumber() : "");
+                        break;
+                    case 2: // 관리번호
+                        String manageNo = "";
+                        Manage manage = device.getManage();
+                        if (manage != null) {
+                            String cate = manage.getManageCate() != null ? manage.getManageCate() : "";
+                            String year = manage.getYear() != null ? manage.getYear().toString() : "";
+                            String num = manage.getManageNum() != null ? manage.getManageNum().toString() : "";
+                            manageNo = (cate + (year.isEmpty() ? "" : ("-" + year)) + (num.isEmpty() ? "" : ("-" + num))).replaceAll("-$", "");
+                        }
+                        cell.setCellValue(manageNo);
+                        break;
+                    case 3: // 종류
+                        cell.setCellValue(device.getType() != null ? device.getType() : "");
+                        break;
+                    case 4: // 직위
+                        cell.setCellValue(device.getOperator() != null && device.getOperator().getPosition() != null ? device.getOperator().getPosition() : "");
+                        break;
+                    case 5: // 취급자
+                        cell.setCellValue(device.getOperator() != null && device.getOperator().getName() != null ? device.getOperator().getName() : "");
+                        break;
+                    case 6: // 제조사
+                        cell.setCellValue(device.getManufacturer() != null ? device.getManufacturer() : "");
+                        break;
+                    case 7: // 모델명
+                        cell.setCellValue(device.getModelName() != null ? device.getModelName() : "");
+                        break;
+                    case 8: // 도입일자
+                        cell.setCellValue(device.getPurchaseDate() != null ? device.getPurchaseDate().toString() : "");
+                        break;
+                    case 9: // 현IP주소
+                        cell.setCellValue(device.getIpAddress() != null ? device.getIpAddress() : "");
+                        break;
+                    case 10: // 설치장소
+                        cell.setCellValue(device.getClassroom() != null && device.getClassroom().getRoomName() != null ? device.getClassroom().getRoomName() : "");
+                        break;
+                    case 11: // 용도
+                        cell.setCellValue(device.getPurpose() != null ? device.getPurpose() : "");
+                        break;
+                    case 12: // 세트분류
+                        cell.setCellValue(device.getSetType() != null ? device.getSetType() : "");
+                        break;
+                    case 13: // 비고
+                        cell.setCellValue(device.getNote() != null ? device.getNote() : "");
+                        break;
+                }
             }
-            row.createCell(1).setCellValue(manageNo);
-            
-            // 종류
-            row.createCell(2).setCellValue(device.getType());
-            // 직위
-            row.createCell(3).setCellValue(device.getOperator() != null ? device.getOperator().getPosition() : "");
-            // 취급자
-            row.createCell(4).setCellValue(device.getOperator() != null ? device.getOperator().getName() : "");
-            // 제조사
-            row.createCell(5).setCellValue(device.getManufacturer());
-            // 모델명
-            row.createCell(6).setCellValue(device.getModelName());
-            // 도입일자
-            row.createCell(7).setCellValue(device.getPurchaseDate() != null ? device.getPurchaseDate().toString() : "");
-            // 현IP주소
-            row.createCell(8).setCellValue(device.getIpAddress());
-            // 설치장소
-            String classroom = device.getClassroom() != null && device.getClassroom().getRoomName() != null ? 
-                              device.getClassroom().getRoomName() : "미지정 교실";
-            row.createCell(9).setCellValue(classroom);
-            // 용도
-            row.createCell(10).setCellValue(device.getPurpose() != null ? device.getPurpose() : "");
-            // 세트분류
-            row.createCell(11).setCellValue(device.getSetType());
-            // 비고
-            row.createCell(12).setCellValue(device.getNote());
         }
 
-        // 컬럼 너비 자동 조정
+        // 컬럼 너비 조정
         for (int i = 0; i < headers.length; i++) {
             sheet.autoSizeColumn(i);
+            // 최소 너비 보장
+            int currentWidth = sheet.getColumnWidth(i);
+            if (currentWidth < 3000) {
+                sheet.setColumnWidth(i, 3000);
+            }
+        }
+
+        // 첫 번째 컬럼(No)은 좁게 설정
+        sheet.setColumnWidth(0, 1500);
+        
+        // 비고 컬럼(13번째)에 자동 줄바꿈 설정
+        CellStyle wrappingStyle = workbook.createCellStyle();
+        wrappingStyle.cloneStyleFrom(dataStyle);
+        wrappingStyle.setWrapText(true);
+        
+        // 비고 컬럼에 줄바꿈 스타일 적용
+        for (int i = 3; i < rowNum; i++) {
+            Row row = sheet.getRow(i);
+            if (row != null) {
+                Cell noteCell = row.getCell(13);
+                if (noteCell != null) {
+                    // 기존 텍스트 가져오기
+                    String noteText = noteCell.getStringCellValue();
+                    // 15자마다 줄바꿈 처리
+                    if (noteText != null && noteText.length() > 15) {
+                        noteCell.setCellStyle(wrappingStyle);
+                    }
+                }
+            }
         }
 
         workbook.write(outputStream);
@@ -613,5 +720,30 @@ public class DeviceService {
         }
         
         return true; // 모든 컬럼이 비어있음
+    }
+
+    /**
+     * 필터링된 장비 목록을 가져오는 메서드
+     * @param schoolId 학교 ID (필터링할 경우)
+     * @param type 장비 유형 (필터링할 경우)
+     * @param classroomId 교실 ID (필터링할 경우)
+     * @return 필터링된 장비 목록
+     */
+    public List<Device> findFiltered(Long schoolId, String type, Long classroomId) {
+        if (schoolId != null && type != null && !type.isEmpty() && classroomId != null) {
+            return findBySchoolAndTypeAndClassroom(schoolId, type, classroomId);
+        } else if (schoolId != null && type != null && !type.isEmpty()) {
+            return findBySchoolAndType(schoolId, type);
+        } else if (schoolId != null && classroomId != null) {
+            return findBySchoolAndClassroom(schoolId, classroomId);
+        } else if (schoolId != null) {
+            return findBySchool(schoolId);
+        } else if (type != null && !type.isEmpty()) {
+            return findByType(type);
+        } else if (classroomId != null) {
+            return findByClassroom(classroomId);
+        } else {
+            return findAll();
+        }
     }
 } 

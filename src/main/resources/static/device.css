@@ -337,4 +337,36 @@ input:focus, textarea:focus, select:focus {
     color: #fff;
     border-color: #2d3a4b;
 }
-/* 추가 안내문구, 여백 등은 필요시 확장 */ 
+/* 추가 안내문구, 여백 등은 필요시 확장 */
+
+/* 교실 섹션 스타일 */
+.classroom-section {
+    margin-bottom: 40px;
+}
+
+.classroom-section .classroom-header {
+    background-color: #2d3a4b;
+    color: #fff;
+    padding: 15px 20px;
+    border-radius: 10px 10px 0 0;
+    margin-bottom: 0;
+}
+
+.classroom-section .classroom-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.classroom-section .device-table {
+    margin-top: 0;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+
+/* 기존 classroom-header 스타일 수정 */
+.device-table tr.classroom-header {
+    background-color: #2d3a4b !important;
+    border-top: 1px solid #1a2533;
+} 
