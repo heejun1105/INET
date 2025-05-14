@@ -35,8 +35,10 @@ public class DeviceUploadController {
         try {
             deviceService.saveDevicesFromExcel(file, schoolId);
             redirectAttributes.addFlashAttribute("message", "업로드 성공!");
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("error", "업로드 실패: " + e.getMessage());
+            redirectAttributes.addFlashAttribute("error", "업로드 중 오류가 발생했습니다: " + e.getMessage());
         }
         return "redirect:/device/upload";
     }

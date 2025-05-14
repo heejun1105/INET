@@ -45,6 +45,8 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Map;
 import java.util.stream.Collectors;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 
 @Service
 @RequiredArgsConstructor
@@ -59,6 +61,9 @@ public class DeviceService {
     private final ManageRepository manageRepository;
     private final ClassroomService classroomService;
     private final UidService uidService;
+    
+    @PersistenceContext
+    private EntityManager entityManager;
     
     // Create
     public Device saveDevice(Device device) {
@@ -370,238 +375,434 @@ public class DeviceService {
         return deviceRepository.findByClassroom(classroom);
     }
 
+    @Transactional
     public void saveDevicesFromExcel(MultipartFile file, Long schoolId) throws Exception {
+        // 파일 확장자 검증
+        String originalFilename = file.getOriginalFilename();
+        System.out.println("엑셀 파일 업로드 시작: " + originalFilename);
+        
+        if (originalFilename == null || !(originalFilename.endsWith(".xls") || originalFilename.endsWith(".xlsx"))) {
+            System.out.println("잘못된 파일 형식: " + originalFilename);
+            throw new IllegalArgumentException("엑셀 파일(.xls 또는 .xlsx)만 업로드 가능합니다.");
+        }
+
+        // 파일 내용 검증
+        if (file.isEmpty()) {
+            System.out.println("빈 파일입니다: " + originalFilename);
+            throw new IllegalArgumentException("빈 파일입니다. 내용이 있는 엑셀 파일을 업로드해주세요.");
+        }
+
         School school = schoolRepository.findById(schoolId)
-                .orElseThrow(() -> new IllegalArgumentException("학교를 찾을 수 없습니다."));
+                .orElseThrow(() -> {
+                    System.out.println("학교를 찾을 수 없음. 학교 ID: " + schoolId);
+                    return new IllegalArgumentException("학교를 찾을 수 없습니다.");
+                });
+        
+        System.out.println("학교 정보: ID=" + school.getSchoolId() + ", 이름=" + school.getSchoolName());
+        
         List<Device> devices = new ArrayList<>();
         try (InputStream is = file.getInputStream()) {
             Workbook workbook = WorkbookFactory.create(is);
             Sheet sheet = workbook.getSheetAt(0);
             boolean first = true;
+            int rowCount = 0;
+            
+            System.out.println("총 행 수: " + sheet.getPhysicalNumberOfRows());
+            
+            // 시트에 데이터가 없는 경우 확인
+            if (sheet.getPhysicalNumberOfRows() <= 1) {
+                System.out.println("데이터가 없는 엑셀 파일입니다");
+                throw new IllegalArgumentException("데이터가 없습니다. 최소한 헤더행과 1개 이상의 데이터행이 필요합니다.");
+            }
+            
             for (Row row : sheet) {
-                if (first) { first = false; continue; } // 헤더 스킵
+                if (first) { 
+                    first = false; 
+                    System.out.println("헤더 행 처리 완료");
+                    continue; 
+                } 
+                rowCount++;
                 
-                // 빈 행 체크 - 첫 번째 컬럼과 타입(3번째 컬럼) 모두 비어있으면 스킵
-                if (isEmptyRow(row)) continue;
-                
-                // UID 정보 처리 (첫 번째 컬럼)
-                String uidInfo = getCellString(row.getCell(0));
-                String uidCate = null;
-                
-                // 관리번호는 두 번째 컬럼(1)
-                String manageNo = getCellString(row.getCell(1));
-                // Manage 엔티티 조회/생성 (관리번호가 없으면 null)
-                Manage manage = null;
-                if (manageNo != null && !manageNo.trim().isEmpty()) {
-                    ManageNumber mn = parseManageNo(manageNo);
-                    manage = manageRepository.findByManageCateAndYearAndManageNum(mn.manageCate, mn.year, mn.manageNum)
-                        .orElseGet(() -> {
-                            Manage m = new Manage();
-                            m.setManageCate(mn.manageCate);
-                            m.setYear(mn.year);
-                            m.setManageNum(mn.manageNum);
-                            return manageRepository.save(m);
-                        });
+                try {
+                    System.out.println((rowCount + 1) + "번째 행 처리 시작");
+                    
+                    // 빈 행 체크 - 타입(3번째 컬럼)이 비어있으면 스킵
+                    if (isEmptyRow(row)) {
+                        System.out.println((rowCount + 1) + "번째 행은 빈 행이므로 스킵합니다");
+                        continue;
+                    }
+                    
+                    // UID 정보 처리 (첫 번째 컬럼)
+                    String uidInfo = null;
+                    try {
+                        uidInfo = getCellString(row.getCell(0));
+                        System.out.println((rowCount + 1) + "번째 행 UID 정보: " + uidInfo);
+                    } catch (Exception e) {
+                        System.out.println((rowCount + 1) + "번째 행 UID 정보 처리 중 오류: " + e.getMessage());
+                    }
+                    
+                    String uidCate = null;
+                    
+                    // 관리번호는 두 번째 컬럼(1)
+                    String manageNo = null;
+                    try {
+                        manageNo = getCellString(row.getCell(1));
+                        System.out.println((rowCount + 1) + "번째 행 관리번호: " + manageNo);
+                    } catch (Exception e) {
+                        System.out.println((rowCount + 1) + "번째 행 관리번호 처리 중 오류: " + e.getMessage());
+                    }
+                    
+                    // Manage 엔티티 조회/생성 (관리번호가 없으면 null)
+                    Manage manage = null;
+                    if (manageNo != null && !manageNo.trim().isEmpty()) {
+                        try {
+                            ManageNumber mn = parseManageNo(manageNo);
+                            System.out.println((rowCount + 1) + "번째 행 관리번호 파싱 결과: 카테고리=" + 
+                                    mn.manageCate + ", 연도=" + mn.year + ", 번호=" + mn.manageNum);
+                            
+                            manage = manageRepository.findByManageCateAndYearAndManageNum(mn.manageCate, mn.year, mn.manageNum)
+                                .map(existingManage -> {
+                                    // 이미 존재하는 Manage 엔티티인 경우 학교 정보 업데이트
+                                    if (existingManage.getSchool() == null) {
+                                        existingManage.setSchool(school);
+                                        return manageRepository.save(existingManage);
+                                    }
+                                    return existingManage;
+                                })
+                                .orElseGet(() -> {
+                                    // 새로운 Manage 엔티티 생성
+                                    Manage m = new Manage();
+                                    m.setManageCate(mn.manageCate);
+                                    m.setYear(mn.year);
+                                    m.setManageNum(mn.manageNum);
+                                    m.setSchool(school); // 학교 정보 설정
+                                    return manageRepository.save(m);
+                                });
+                            
+                            System.out.println((rowCount + 1) + "번째 행 Manage 엔티티 처리 완료: ID=" + manage.getManageId());
+                        } catch (Exception e) {
+                            System.out.println((rowCount + 1) + "번째 행 관리번호 형식 오류: " + manageNo + ", " + e.getMessage());
+                            // 특정 행의 관리번호 오류를 알림
+                            throw new IllegalArgumentException((rowCount+1) + "번째 행의 관리번호 형식이 잘못되었습니다: " + manageNo);
+                        }
+                    }
+                    
+                    // 타입 정보 (세 번째 컬럼)
+                    String type = null;
+                    try {
+                        type = getCellString(row.getCell(2));
+                        System.out.println((rowCount + 1) + "번째 행 장비 타입: " + type);
+                    } catch (Exception e) {
+                        System.out.println((rowCount + 1) + "번째 행 장비 타입 처리 중 오류: " + e.getMessage());
+                    }
+                    
+                    // 유효한 타입이 없으면 구체적인 오류 메시지와 함께 예외 발생
+                    if (type == null || type.trim().isEmpty()) {
+                        System.out.println((rowCount + 1) + "번째 행 장비 타입 누락");
+                        throw new IllegalArgumentException((rowCount+1) + "번째 행에 장비 타입이 없습니다. 장비 타입은 필수 값입니다.");
+                    }
+                    
+                    // 취급자 정보 (4번째와 5번째 컬럼)
+                    final String operatorPosition = getCellString(row.getCell(3)); // 직위
+                    final String operatorName = getCellString(row.getCell(4)); // 취급자
+                    Operator operator = null;
+                    
+                    try {
+                        if (operatorName != null && !operatorName.isEmpty() && 
+                            operatorPosition != null && !operatorPosition.isEmpty()) {
+                            operator = operatorService.findByNameAndPositionAndSchool(operatorName, operatorPosition, school)
+                                .orElseGet(() -> {
+                                    Operator op = new Operator();
+                                    op.setName(operatorName);
+                                    op.setPosition(operatorPosition);
+                                    op.setSchool(school);
+                                    return operatorService.saveOperator(op);
+                                });
+                            System.out.println((rowCount + 1) + "번째 행 취급자 정보: " + operatorName + " (" + operatorPosition + ")");
+                        }
+                    } catch (Exception e) {
+                        System.out.println((rowCount + 1) + "번째 행 취급자 정보 처리 중 오류: " + e.getMessage());
+                        // 취급자 정보는 선택사항이므로 오류가 있어도 진행
+                    }
+                    
+                    // 기타 정보
+                    String manufacturer = null;
+                    String modelName = null;
+                    LocalDate purchaseDate = null;
+                    String ipAddress = null;
+                    
+                    try {
+                        manufacturer = getCellString(row.getCell(5));
+                        modelName = getCellString(row.getCell(6));
+                        
+                        Cell dateCell = row.getCell(7); // 도입일자 컬럼
+                        if (dateCell != null && dateCell.getCellType() != CellType.BLANK) {
+                            purchaseDate = parseLocalDate(dateCell);
+                            System.out.println((rowCount + 1) + "번째 행 도입일자 파싱 결과: " + purchaseDate);
+                        }
+                        
+                        ipAddress = getCellString(row.getCell(8));
+                    } catch (Exception e) {
+                        System.out.println((rowCount + 1) + "번째 행 기타 정보 처리 중 오류: " + e.getMessage());
+                        // 선택적 정보이므로 진행
+                    }
+                    
+                    // 교실 처리 (필수 항목)
+                    String classroomName = null;
+                    Classroom classroom = null;
+                    
+                    try {
+                        classroomName = getCellString(row.getCell(9));
+                        System.out.println((rowCount + 1) + "번째 행 설치장소(교실): " + classroomName);
+                        
+                        if (classroomName == null || classroomName.isBlank()) {
+                            System.out.println((rowCount + 1) + "번째 행 설치장소(교실) 누락");
+                            throw new IllegalArgumentException((rowCount+1) + "번째 행에 설치장소(교실)가 지정되지 않았습니다. 설치장소는 필수 항목입니다.");
+                        }
+                        
+                        classroom = classroomService.findByRoomName(classroomName.trim());
+                        if (classroom == null) {
+                            classroom = new Classroom();
+                            classroom.setRoomName(classroomName.trim());
+                            classroom.setSchool(school);
+                            classroom.setXCoordinate(0);
+                            classroom.setYCoordinate(0);
+                            classroom.setWidth(100);
+                            classroom.setHeight(100);
+                            classroom = classroomService.saveClassroom(classroom);
+                            System.out.println((rowCount + 1) + "번째 행 새 교실 생성: " + classroomName);
+                        } else {
+                            System.out.println((rowCount + 1) + "번째 행 기존 교실 사용: " + classroomName);
+                        }
+                    } catch (IllegalArgumentException e) {
+                        throw e; // 이미 구체적인 오류 메시지가 있는 예외는 그대로 던짐
+                    } catch (Exception e) {
+                        System.out.println((rowCount + 1) + "번째 행 교실 처리 중 예외 발생: " + e.getMessage());
+                        throw new IllegalArgumentException((rowCount+1) + "번째 행 교실 처리 중 오류가 발생했습니다: " + e.getMessage());
+                    }
+                    
+                    // 기타 옵션 필드
+                    String purpose = getCellString(row.getCell(10));
+                    String setType = getCellString(row.getCell(11));
+                    String note = getCellString(row.getCell(12));
+                    
+                    // UID 카테고리 결정 로직
+                    if (uidInfo == null || uidInfo.trim().isEmpty()) {
+                        // UID 정보가 비어있을 경우 자동 생성
+                        if (type != null && !type.trim().isEmpty()) {
+                            if ("데스크톱".equals(type)) {
+                                // 데스크톱의 경우 manageCate에 따라 UID 카테고리 결정
+                                if (manage != null && manage.getManageCate() != null) {
+                                    String manageCate = manage.getManageCate();
+                                    switch (manageCate) {
+                                        case "업무":
+                                            uidCate = "DW";
+                                            break;
+                                        case "교육":
+                                            uidCate = "DE";
+                                            break;
+                                        case "기타":
+                                            uidCate = "DK";
+                                            break;
+                                        case "컴퓨터교육":
+                                            uidCate = "DC";
+                                            break;
+                                        case "학교구매":
+                                            uidCate = "DS";
+                                            break;
+                                        case "기증품":
+                                            uidCate = "DD";
+                                            break;
+                                        default:
+                                            uidCate = "DW"; // 기본값
+                                            break;
+                                    }
+                                } else {
+                                    uidCate = "DW"; // 관리번호가 없는 경우 기본값
+                                }
+                            } else {
+                                // 다른 장비 타입에 따라 UID 카테고리 결정
+                                switch (type) {
+                                    case "모니터":
+                                        uidCate = "MO";
+                                        break;
+                                    case "프린터":
+                                        uidCate = "PR";
+                                        break;
+                                    case "TV":
+                                        uidCate = "TV";
+                                        break;
+                                    case "전자칠판":
+                                        uidCate = "ID"; // IE에서 ID로 변경됨
+                                        break;
+                                    case "전자교탁":
+                                        uidCate = "ED";
+                                        break;
+                                    case "DID":
+                                        uidCate = "DI";
+                                        break;
+                                    case "태블릿":
+                                        uidCate = "TB";
+                                        break;
+                                    case "프로젝트":
+                                    case "프로젝터":
+                                        uidCate = "PJ";
+                                        break;
+                                    default:
+                                        uidCate = "ET"; // 기타 장비
+                                        break;
+                                }
+                            }
+                        } else {
+                            uidCate = "ET"; // 타입 정보가 없는 경우 기본값
+                        }
+                    } else {
+                        // UID 정보가 직접 입력된 경우 그대로 사용
+                        uidCate = uidInfo;
+                    }
+                    
+                    System.out.println((rowCount + 1) + "번째 행 최종 UID 카테고리: " + uidCate);
+                    
+                    // Device 객체 생성 및 기본 정보 설정
+                    Device device = new Device();
+                    device.setType(type);
+                    device.setManufacturer(manufacturer);
+                    device.setModelName(modelName);
+                    device.setPurchaseDate(purchaseDate);
+                    device.setIpAddress(ipAddress);
+                    device.setPurpose(purpose);
+                    device.setSetType(setType);
+                    device.setNote(note);
+                    device.setUnused(false);
+                    device.setClassroom(classroom);
+                    device.setSchool(school);
+                    device.setManage(manage);
+                    device.setOperator(operator);
+                    
+                    // 디바이스 저장 전에 UID 설정 - 필수 데이터 확인
+                    if (uidCate != null && !uidCate.trim().isEmpty()) {
+                        devices.add(device);
+                        System.out.println((rowCount + 1) + "번째 행 장비 처리 완료");
+                    } else {
+                        System.out.println((rowCount + 1) + "번째 행 UID 카테고리 누락으로 장비 무시");
+                    }
+                } catch (Exception e) {
+                    System.out.println((rowCount + 1) + "번째 행 처리 중 예외 발생: " + e.getMessage());
+                    throw new IllegalArgumentException((rowCount+1) + "번째 행 처리 중 오류가 발생했습니다: " + e.getMessage());
                 }
-                
-                // 타입 정보 (세 번째 컬럼)
-                String type = getCellString(row.getCell(2));
-                
-                // 유효한 타입이 없으면 스킵
-                if (type == null || type.trim().isEmpty()) continue;
-                
-                // UID 카테고리 결정 로직
-                if (uidInfo == null || uidInfo.trim().isEmpty()) {
-                    // UID 정보가 비어있을 경우 자동 생성
-                    if (type != null && !type.trim().isEmpty()) {
+            }
+            
+            // 모든 디바이스 추출 후, UID 카테고리별로 그룹화하여 ID 번호 부여
+            Map<String, List<Device>> devicesByCate = devices.stream()
+                    .collect(Collectors.groupingBy(device -> {
+                        // Device에 설정된 UID 카테고리 얻기
+                        String type = device.getType();
+                        Manage manage = device.getManage();
+                        
                         if ("데스크톱".equals(type)) {
-                            // 데스크톱의 경우 manageCate에 따라 UID 카테고리 결정
                             if (manage != null && manage.getManageCate() != null) {
                                 String manageCate = manage.getManageCate();
                                 switch (manageCate) {
-                                    case "업무":
-                                        uidCate = "DW";
-                                        break;
-                                    case "교육":
-                                        uidCate = "DE";
-                                        break;
-                                    case "기타":
-                                        uidCate = "DK";
-                                        break;
-                                    case "컴퓨터교육":
-                                        uidCate = "DC";
-                                        break;
-                                    case "학교구매":
-                                        uidCate = "DS";
-                                        break;
-                                    case "기증품":
-                                        uidCate = "DD";
-                                        break;
-                                    default:
-                                        uidCate = "DW"; // 기본값
-                                        break;
+                                    case "업무": return "DW";
+                                    case "교육": return "DE";
+                                    case "기타": return "DK";
+                                    case "컴퓨터교육": return "DC";
+                                    case "학교구매": return "DS";
+                                    case "기증품": return "DD";
+                                    default: return "DW";
                                 }
                             } else {
-                                uidCate = "DW"; // 관리번호가 없는 경우 기본값
+                                return "DW";
                             }
                         } else {
-                            // 다른 장비 타입에 따라 UID 카테고리 결정
                             switch (type) {
-                                case "모니터":
-                                    uidCate = "MO";
-                                    break;
-                                case "프린터":
-                                    uidCate = "PR";
-                                    break;
-                                case "TV":
-                                    uidCate = "TV";
-                                    break;
-                                case "전자칠판":
-                                    uidCate = "ID";
-                                    break;
-                                case "전자교탁":
-                                    uidCate = "ED";
-                                    break;
-                                case "DID":
-                                    uidCate = "DI";
-                                    break;
-                                case "태블릿":
-                                    uidCate = "TB";
-                                    break;
+                                case "모니터": return "MO";
+                                case "프린터": return "PR";
+                                case "TV": return "TV";
+                                case "전자칠판": return "ID"; // IE에서 ID로 변경됨
+                                case "전자교탁": return "ED";
+                                case "DID": return "DI";
+                                case "태블릿": return "TB";
                                 case "프로젝트":
-                                case "프로젝터":
-                                    uidCate = "PJ";
-                                    break;
-                                default:
-                                    uidCate = "ET"; // 기타 장비
-                                    break;
+                                case "프로젝터": return "PJ";
+                                default: return "ET";
                             }
                         }
-                    } else {
-                        uidCate = "ET"; // 타입 정보가 없는 경우 기본값
-                    }
-                } else {
-                    // UID 정보가 직접 입력된 경우 그대로 사용
-                    uidCate = uidInfo;
-                }
+                    }));
+            
+            System.out.println("UID 카테고리별 장비 수: " + devicesByCate.size() + "개 카테고리");
+            
+            // 각 카테고리별로 ID 번호 부여하고 UID 생성
+            for (Map.Entry<String, List<Device>> entry : devicesByCate.entrySet()) {
+                String cate = entry.getKey();
+                List<Device> deviceList = entry.getValue();
                 
-                // Operator(취급자/직위) 컬럼 인덱스 조정
-                String operatorPosition = getCellString(row.getCell(3)); // 직위
-                String operatorName = getCellString(row.getCell(4)); // 취급자
-                Operator operator = null;
-                if (operatorName != null && !operatorName.isBlank() && operatorPosition != null && !operatorPosition.isBlank()) {
-                    operator = operatorService.findByNameAndPositionAndSchool(operatorName, operatorPosition, school)
-                        .orElseGet(() -> {
-                            Operator op = new Operator();
-                            op.setName(operatorName);
-                            op.setPosition(operatorPosition);
-                            op.setSchool(school);
-                            return operatorService.saveOperator(op);
-                        });
-                }
-                // Classroom(설치장소) 컬럼 인덱스 조정
-                String classroomName = getCellString(row.getCell(9));
-                Classroom classroom = null;
-                if (classroomName != null && !classroomName.isBlank()) {
-                    classroom = classroomService.findByRoomName(classroomName.trim());
-                    if (classroom == null) {
-                        classroom = new Classroom();
-                        classroom.setRoomName(classroomName.trim());
-                        classroom.setSchool(school);
-                        classroom.setXCoordinate(0);
-                        classroom.setYCoordinate(0);
-                        classroom.setWidth(100);
-                        classroom.setHeight(100);
-                        classroom = classroomService.saveClassroom(classroom);
-                    }
-                }
-                Device device = new Device();
-                device.setManage(manage);
-                // Device 필드 매핑 순서 조정
-                device.setType(getCellString(row.getCell(2)));
-                device.setManufacturer(getCellString(row.getCell(5)));
-                device.setModelName(getCellString(row.getCell(6)));
-                device.setPurchaseDate(parseLocalDate(row.getCell(7)));
-                device.setIpAddress(getCellString(row.getCell(8)));
-                device.setClassroom(classroom);
-                device.setPurpose(getCellString(row.getCell(10)));
-                device.setUnused(false);
-                device.setSetType(getCellString(row.getCell(11)));
-                device.setNote(getCellString(row.getCell(12)));
-                device.setSchool(school); // 반드시 선택한 학교로 저장
-                device.setOperator(operator);
+                System.out.println("카테고리 '" + cate + "'의 장비 수: " + deviceList.size() + "개");
                 
-                // 디바이스 저장 전에 UID 설정 - 필수 데이터 확인
-                if (uidCate != null && !uidCate.trim().isEmpty()) {
-                    devices.add(device);
+                // 현재 카테고리의 최대 ID 번호 조회
+                Long lastNumber = school != null 
+                    ? uidService.getLastIdNumberBySchool(cate, school) 
+                    : uidService.getLastIdNumber(cate);
+                
+                System.out.println("카테고리 '" + cate + "'의 마지막 ID 번호: " + lastNumber);
+                
+                // 각 장비에 순차적으로 ID 번호 부여
+                for (int i = 0; i < deviceList.size(); i++) {
+                    Long idNumber = lastNumber + i + 1;
+                    Device device = deviceList.get(i);
+                    setDeviceUidWithNumber(device, cate, idNumber);
+                    System.out.println("장비에 UID 설정: 카테고리=" + cate + ", ID번호=" + idNumber);
                 }
             }
+            
+            // 최종 저장
+            int savedCount = deviceRepository.saveAll(devices).size();
+            System.out.println("총 " + savedCount + "개의 장비 저장 완료");
         }
         
-        // 모든 디바이스 추출 후, UID 카테고리별로 그룹화하여 ID 번호 부여
-        Map<String, List<Device>> devicesByCate = devices.stream()
-                .collect(Collectors.groupingBy(device -> {
-                    // Device에 설정된 UID 카테고리 얻기
-                    String type = device.getType();
-                    Manage manage = device.getManage();
-                    
-                    if ("데스크톱".equals(type)) {
-                        if (manage != null && manage.getManageCate() != null) {
-                            String manageCate = manage.getManageCate();
-                            switch (manageCate) {
-                                case "업무": return "DW";
-                                case "교육": return "DE";
-                                case "기타": return "DK";
-                                case "컴퓨터교육": return "DC";
-                                case "학교구매": return "DS";
-                                case "기증품": return "DD";
-                                default: return "DW";
-                            }
-                        } else {
-                            return "DW";
-                        }
-                    } else {
-                        switch (type) {
-                            case "모니터": return "MO";
-                            case "프린터": return "PR";
-                            case "TV": return "TV";
-                            case "전자칠판": return "ID";
-                            case "전자교탁": return "ED";
-                            case "DID": return "DI";
-                            case "태블릿": return "TB";
-                            case "프로젝트":
-                            case "프로젝터": return "PJ";
-                            default: return "ET";
-                        }
-                    }
-                }));
-        
-        // 각 카테고리별로 ID 번호 부여하고 UID 생성
-        for (Map.Entry<String, List<Device>> entry : devicesByCate.entrySet()) {
-            String cate = entry.getKey();
-            List<Device> deviceList = entry.getValue();
-            
-            // 현재 카테고리의 최대 ID 번호 조회
-            Long lastNumber = school != null 
-                ? uidService.getLastIdNumberBySchool(cate, school) 
-                : uidService.getLastIdNumber(cate);
-            
-            // 각 장비에 순차적으로 ID 번호 부여
-            for (int i = 0; i < deviceList.size(); i++) {
-                Long idNumber = lastNumber + i + 1;
-                Device device = deviceList.get(i);
-                setDeviceUidWithNumber(device, cate, idNumber);
-            }
-        }
-        
-        // 최종 저장
-        deviceRepository.saveAll(devices);
+        // 메서드 끝에 추가 (return 문 바로 앞에)
+        entityManager.flush();
+        entityManager.clear();
     }
 
     private String getCellString(Cell cell) {
         if (cell == null) return null;
-        cell.setCellType(CellType.STRING);
-        return cell.getStringCellValue().trim();
+        
+        try {
+            switch (cell.getCellType()) {
+                case STRING:
+                    return cell.getStringCellValue().trim();
+                case NUMERIC:
+                    if (DateUtil.isCellDateFormatted(cell)) {
+                        return cell.getLocalDateTimeCellValue().toString();
+                    } else {
+                        // 숫자를 문자열로 변환 (소수점 제거)
+                        double numValue = cell.getNumericCellValue();
+                        if (numValue == Math.floor(numValue)) {
+                            return String.format("%.0f", numValue);
+                        } else {
+                            return String.valueOf(numValue);
+                        }
+                    }
+                case BOOLEAN:
+                    return String.valueOf(cell.getBooleanCellValue());
+                case FORMULA:
+                    try {
+                        return cell.getStringCellValue().trim();
+                    } catch (Exception e) {
+                        try {
+                            return String.valueOf(cell.getNumericCellValue());
+                        } catch (Exception ex) {
+                            return "";
+                        }
+                    }
+                default:
+                    return "";
+            }
+        } catch (Exception e) {
+            System.out.println("셀 값 추출 중 오류 발생: " + e.getMessage());
+            return "";
+        }
     }
 
     private static class ManageNumber {
@@ -622,25 +823,63 @@ public class DeviceService {
         } else if (parts.length == 2) {
             return new ManageNumber(parts[0], null, Long.parseLong(parts[1]));
         } else {
-            throw new IllegalArgumentException("잘못된 관리번호 형식: " + manageNo);
+            throw new IllegalArgumentException("관리번호 형식이 잘못되었습니다. 확인하여주세요. ('관리카테고리-일련번호' 또는 '관리카테고리-연도-일련번호' 형식이어야 합니다.)");
         }
     }
 
     private LocalDate parseLocalDate(Cell cell) {
         String value = getCellString(cell);
         if (value == null || value.isBlank()) return null;
-        value = value.replace("년", "-").replace("월", "").replace("일", "").replace(" ", "").replace("--", "-");
+        
         try {
+            // 셀이 날짜 형식인 경우 직접 변환
+            if (cell.getCellType() == CellType.NUMERIC && DateUtil.isCellDateFormatted(cell)) {
+                return cell.getLocalDateTimeCellValue().toLocalDate();
+            }
+            
+            // 문자열 전처리 - 다양한 구분자와 형식 정규화
+            value = value.trim()
+                    .replace("년", "-").replace("월", "-").replace("일", "")
+                    .replace(".", "-").replace("/", "-").replace(" ", "")
+                    .replaceAll("--", "-").replaceAll("-$", "");
+            
+            // 다양한 날짜 형식 처리
             if (value.matches("\\d{4}-\\d{1,2}-\\d{1,2}")) {
+                // YYYY-MM-DD 형식
                 return LocalDate.parse(value, DateTimeFormatter.ofPattern("yyyy-M-d"));
             } else if (value.matches("\\d{4}-\\d{1,2}")) {
+                // YYYY-MM 형식 (일은 1일로 설정)
                 return LocalDate.parse(value + "-01", DateTimeFormatter.ofPattern("yyyy-M-d"));
             } else if (value.matches("\\d{4}")) {
+                // YYYY 형식 (월과 일은 1월 1일로 설정)
                 return LocalDate.parse(value + "-01-01", DateTimeFormatter.ofPattern("yyyy-M-d"));
+            } else if (value.matches("\\d{2}-\\d{1,2}")) {
+                // YY-MM 형식 (현재 세기에 맞춰 연도 해석, 일은 1일로 설정)
+                int currentCentury = LocalDate.now().getYear() / 100 * 100;
+                int year = Integer.parseInt(value.split("-")[0]);
+                if (year > LocalDate.now().getYear() % 100) {
+                    // 입력된 연도가 현재 연도의 뒤 두자리보다 크면 이전 세기로 해석
+                    currentCentury -= 100;
+                }
+                return LocalDate.parse((currentCentury + year) + "-" + value.split("-")[1] + "-01", 
+                        DateTimeFormatter.ofPattern("yyyy-M-d"));
+            } else if (value.matches("\\d{2}")) {
+                // YY 형식 (현재 세기에 맞춰 연도 해석, 월과 일은 1월 1일로 설정)
+                int currentCentury = LocalDate.now().getYear() / 100 * 100;
+                int year = Integer.parseInt(value);
+                if (year > LocalDate.now().getYear() % 100) {
+                    // 입력된 연도가 현재 연도의 뒤 두자리보다 크면 이전 세기로 해석
+                    currentCentury -= 100;
+                }
+                return LocalDate.parse((currentCentury + year) + "-01-01", 
+                        DateTimeFormatter.ofPattern("yyyy-M-d"));
             }
-        } catch (DateTimeParseException e) {
-            // 무시하고 null 반환
+        } catch (DateTimeParseException | NumberFormatException e) {
+            // 날짜 파싱 실패 시 null 반환 (오류 메시지 없이 계속 진행)
+            System.out.println("날짜 파싱 오류: " + value + " - " + e.getMessage());
         }
+        
+        // 어떤 형식으로도 파싱할 수 없는 경우 null 반환 (오류 발생 없이 빈 값으로 처리)
         return null;
     }
 
@@ -707,6 +946,7 @@ public class DeviceService {
         if (typeValue == null || typeValue.trim().isEmpty()) return true;
         
         // 최소한 하나의 다른 컬럼에 데이터가 있어야 함
+        boolean hasOtherData = false;
         for (int i = 0; i <= 12; i++) {
             if (i == 2) continue; // 타입 컬럼은 이미 체크함
             
@@ -714,12 +954,14 @@ public class DeviceService {
             if (cell != null) {
                 String value = getCellString(cell);
                 if (value != null && !value.trim().isEmpty()) {
-                    return false; // 데이터가 있는 컬럼을 발견
+                    hasOtherData = true;
+                    break; // 데이터가 있는 컬럼을 발견
                 }
             }
         }
         
-        return true; // 모든 컬럼이 비어있음
+        // 타입은 있지만 다른 모든 컬럼이 비어있으면 빈 행으로 간주
+        return !hasOtherData;
     }
 
     /**

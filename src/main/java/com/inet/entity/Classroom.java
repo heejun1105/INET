@@ -1,7 +1,10 @@
 package com.inet.entity;
 
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
+import lombok.EqualsAndHashCode;
 import java.util.List;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -10,7 +13,10 @@ import com.inet.config.Views;
 
 @Entity
 @Table(name = "classroom")
-@Data
+@Getter
+@Setter
+@ToString(exclude = {"devices"})
+@EqualsAndHashCode(exclude = {"devices"})
 public class Classroom {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
