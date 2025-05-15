@@ -68,7 +68,7 @@
                             <th>담당자</th>
                             <th>제조사</th>
                             <th>모델명</th>
-                            <th>구매일자</th>
+                            <th>제조일자</th>
                             <th>IP주소</th>
                             <th>교실</th>
                             <th>용도</th>
@@ -110,7 +110,7 @@
                                 <td th:text="${device.operator != null && device.operator.name != null ? device.operator.name : ''}"></td>
                                 <td th:text="${device.manufacturer != null ? device.manufacturer : ''}"></td>
                                 <td th:text="${device.modelName != null ? device.modelName : ''}"></td>
-                                <td th:text="${device.purchaseDate != null ? device.purchaseDate : ''}"></td>
+                                <td th:text="${device.purchaseDate != null ? (#strings.substring(device.purchaseDate, 2, 4) + '.' + #strings.substring(device.purchaseDate, 5, 7) + '.' + #strings.substring(device.purchaseDate, 8, 10)) : ''}"></td>
                                 <td class="ip-address" th:text="${device.ipAddress != null ? device.ipAddress : ''}"></td>
                                 <td th:text="${device.classroom != null && device.classroom.roomName != null ? device.classroom.roomName : ''}"></td>
                                 <td th:text="${device.purpose != null ? device.purpose : ''}"></td>
