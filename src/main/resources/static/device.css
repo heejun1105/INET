@@ -9,11 +9,12 @@ body * {
 }
 
 .container {
-    width: 1200px;
-    min-height: 800px;
+    width: 100%;
+    max-width: 1200px;
+    min-height: 600px;
     border: none;
-    margin: 50px auto;
-    padding: 50px;
+    margin: 20px auto;
+    padding: 20px;
     border-radius: 15px;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
     background-color: #fff;
@@ -40,19 +41,19 @@ input:focus, textarea:focus, select:focus {
 }
 
 .title {
-    margin-bottom: 60px;
+    margin-bottom: 30px;
 }
 
 .title .subject {
-    font-size: 40px;
+    font-size: 28px;
     font-weight: 700;
     color: #2d3436;
 }
 
 .title .subtitle {
-    font-size: 18px;
+    font-size: 16px;
     color: #636e72;
-    margin-top: 10px;
+    margin-top: 5px;
 }
 
 .main {
@@ -87,16 +88,18 @@ input:focus, textarea:focus, select:focus {
 }
 
 .sub-but {
-    width: 90%;
-    height: 60px;
+    width: auto;
+    padding: 8px 16px;
     border: none;
     background-color: rgba(61, 150, 255, 0.87);
     color: white;
     font-weight: 700;
-    font-size: 18px;
+    font-size: 14px;
     border-radius: 5px;
     cursor: pointer;
     transition: all 0.3s ease;
+    display: inline-block;
+    text-align: center;
 }
 
 .sub-but:hover {
@@ -114,28 +117,33 @@ input:focus, textarea:focus, select:focus {
 /* 테이블 스타일 */
 .device-table {
     width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
+    border-collapse: collapse;
     margin-top: 20px;
     background: #fff;
     border-radius: 10px;
     overflow: hidden;
     box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    font-size: 12px;
 }
 
 .device-table th {
     background-color: #f8f9fa;
     font-weight: 600;
     color: #495057;
-    padding: 15px;
-    text-align: left;
+    padding: 10px 8px;
+    text-align: center;
     border-bottom: 2px solid #e9ecef;
+    word-break: keep-all;
+    font-size: 13px;
 }
 
 .device-table td {
-    padding: 12px 15px;
+    padding: 8px;
     border-bottom: 1px solid #e9ecef;
     color: #495057;
+    word-break: break-word;
+    vertical-align: middle;
+    text-align: center;
 }
 
 .device-table tr:hover {
@@ -146,37 +154,152 @@ input:focus, textarea:focus, select:focus {
     border-bottom: none;
 }
 
+/* 테이블 컬럼 너비 지정 */
+.device-table th:nth-child(1), .device-table td:nth-child(1) { width: 70px; } /* 학교 */
+.device-table th:nth-child(2), .device-table td:nth-child(2) { width: 60px; } /* 고유번호 */
+.device-table th:nth-child(3), .device-table td:nth-child(3) { width: 80px; } /* 관리번호 */
+.device-table th:nth-child(4), .device-table td:nth-child(4) { width: 60px; } /* 유형 */
+.device-table th:nth-child(5), .device-table td:nth-child(5) { width: 50px; } /* 직위 */
+.device-table th:nth-child(6), .device-table td:nth-child(6) { width: 50px; } /* 담당자 */
+.device-table th:nth-child(7), .device-table td:nth-child(7) { width: 60px; } /* 제조사 */
+.device-table th:nth-child(8), .device-table td:nth-child(8) { width: 70px; } /* 모델명 */
+.device-table th:nth-child(9), .device-table td:nth-child(9) { width: 70px; } /* 구매일자 */
+.device-table th:nth-child(10), .device-table td:nth-child(10) { width: 90px; } /* IP주소 */
+.device-table th:nth-child(11), .device-table td:nth-child(11) { width: 60px; } /* 교실 */
+.device-table th:nth-child(12), .device-table td:nth-child(12) { width: 60px; } /* 용도 */
+.device-table th:nth-child(13), .device-table td:nth-child(13) { width: 60px; } /* 세트분류 */
+.device-table th:nth-child(14), .device-table td:nth-child(14) { width: 80px; } /* 비고 */
+.device-table th:nth-child(15), .device-table td:nth-child(15) { width: 40px; } /* 불용 */
+.device-table th:nth-child(16), .device-table td:nth-child(16) { width: 70px; } /* 관리 */
+
+/* 유형 컬럼 스타일 - 4글자까지 줄바꿈 안되게 */
+.device-type {
+    white-space: nowrap;
+}
+
+/* IP 주소 컬럼 스타일 - 줄바꿈 안되게 */
+.ip-address {
+    white-space: nowrap;
+}
+
+/* IP 주소 컬럼 스타일 - 줄바꿈 안되게 */
+.device-table th:nth-child(10), .device-table td:nth-child(10) {
+    white-space: nowrap;
+    width: 90px; /* IP 주소 컬럼 너비 조금 더 늘림 */
+}
+
+@media (max-width: 1220px) {
+    .device-type, 
+    .ip-address,
+    .device-table td:nth-child(10) {
+        white-space: normal;
+    }
+}
+
+/* 버튼 공통 스타일 */
+.btn-primary, .btn-success, .btn-warning, .btn-danger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 15px;
+    border: none;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.btn-primary {
+    background-color: #4361ee;
+}
+
+.btn-primary:hover {
+    background-color: #3a56d3;
+    box-shadow: 0 4px 8px rgba(67, 97, 238, 0.3);
+}
+
+.btn-success {
+    background-color: #38b000;
+}
+
+.btn-success:hover {
+    background-color: #2d9300;
+    box-shadow: 0 4px 8px rgba(56, 176, 0, 0.3);
+}
+
+.btn-warning {
+    background-color: #ff9e00;
+    padding: 6px 9px;
+    font-size: 12px;
+}
+
+.btn-warning:hover {
+    background-color: #e68a00;
+    box-shadow: 0 4px 8px rgba(255, 158, 0, 0.3);
+}
+
+.btn-danger {
+    background-color: #e63946;
+    padding: 6px 9px;
+    font-size: 12px;
+}
+
+.btn-danger:hover {
+    background-color: #d32f2f;
+    box-shadow: 0 4px 8px rgba(230, 57, 70, 0.3);
+}
+
+/* 버튼 안의 아이콘 스타일 */
+.btn-primary i, .btn-success i, .btn-warning i, .btn-danger i {
+    margin-right: 6px;
+}
+
+.btn-warning i, .btn-danger i {
+    margin-right: 0;
+}
+
+/* 액션 버튼 컨테이너 */
+.action-buttons-container {
+    display: flex;
+    gap: 10px;
+    margin-left: auto;
+}
+
+/* 테이블 내 액션 버튼 */
+.action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+}
+
 /* 필터 컨테이너 */
 .filter-container {
     display: flex;
-    gap: 15px;
-    margin-bottom: 30px;
+    gap: 10px;
+    margin-bottom: 20px;
     align-items: center;
     background: #f8f9fa;
-    padding: 20px;
+    padding: 15px;
     border-radius: 10px;
+    flex-wrap: wrap;
 }
 
 .filter-container select {
-    padding: 10px 15px;
+    padding: 8px 12px;
     border-radius: 8px;
     border: 1px solid #e0e0e0;
     background-color: #fff;
-    font-size: 14px;
-    min-width: 200px;
+    font-size: 13px;
+    min-width: 150px;
 }
 
 .filter-container .sub-but {
     margin-left: auto;
-    padding: 10px 20px;
-    height: auto;
-    font-size: 14px;
-}
-
-/* 액션 버튼 */
-.action-buttons {
-    display: flex;
-    gap: 8px;
+    font-size: 13px;
 }
 
 /* 교실 헤더 스타일 */
@@ -186,13 +309,14 @@ input:focus, textarea:focus, select:focus {
 }
 
 .device-table tr.classroom-header td {
-    padding: 14px 15px;
+    padding: 10px;
     font-weight: 600;
     color: #fff;
+    text-align: left;
 }
 
 .device-table tr.classroom-header strong {
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 700;
     color: #fff;
 }
@@ -204,13 +328,14 @@ input:focus, textarea:focus, select:focus {
 }
 
 .device-table tr.group-header td {
-    padding: 12px 15px;
+    padding: 8px 10px;
     font-weight: 600;
     color: #2d3436;
+    text-align: left;
 }
 
 .device-table tr.group-header strong {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
     color: #3d96ff;
 }
@@ -227,33 +352,6 @@ input:focus, textarea:focus, select:focus {
     border-left: 3px solid #ffa502;
 }
 
-.action-buttons button, .action-buttons a {
-    padding: 6px 12px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    text-decoration: none;
-    color: white;
-    font-size: 13px;
-    transition: all 0.3s ease;
-}
-
-.btn-warning {
-    background-color: #ffc107;
-}
-
-.btn-warning:hover {
-    background-color: #e0a800;
-}
-
-.btn-danger {
-    background-color: #dc3545;
-}
-
-.btn-danger:hover {
-    background-color: #c82333;
-}
-
 /* 페이지네이션 */
 .pagination {
     display: flex;
@@ -265,13 +363,14 @@ input:focus, textarea:focus, select:focus {
 }
 
 .pagination a {
-    padding: 8px 16px;
+    padding: 6px 12px;
     text-decoration: none;
     border: 1px solid #e0e0e0;
     color: #495057;
-    border-radius: 8px;
+    border-radius: 4px;
     transition: all 0.3s ease;
     display: inline-block;
+    font-size: 13px;
 }
 
 .pagination a:hover {
@@ -297,76 +396,100 @@ input:focus, textarea:focus, select:focus {
     background: #fff;
     border-radius: 16px;
     box-shadow: 0 4px 24px rgba(0,0,0,0.08);
-    padding: 40px 32px 32px 32px;
-    margin-bottom: 40px;
+    padding: 30px 20px;
+    margin-bottom: 30px;
 }
+
 .device-title {
     text-align: center;
-    margin-bottom: 32px;
+    margin-bottom: 25px;
 }
+
 .device-title h2 {
     font-weight: 700;
-    font-size: 2.2rem;
+    font-size: 1.8rem;
     margin-bottom: 8px;
     color: #2d3a4b;
 }
+
 .device-subtitle {
     color: #6c757d;
-    font-size: 1.1rem;
+    font-size: 1rem;
     margin-bottom: 0;
 }
+
 .table-striped th, .table-striped td {
     vertical-align: middle;
-    font-size: 1rem;
+    font-size: 0.9rem;
 }
+
 .btn-primary, .btn-warning, .btn-danger {
-    border-radius: 6px;
+    border-radius: 4px;
     font-weight: 600;
     letter-spacing: 0.5px;
 }
+
 .form-select, .form-control {
-    border-radius: 6px;
-    font-size: 1rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
 }
+
 .pagination .page-link {
-    border-radius: 6px;
+    border-radius: 4px;
     color: #2d3a4b;
 }
+
 .pagination .active .page-link {
     background: #2d3a4b;
     color: #fff;
     border-color: #2d3a4b;
 }
-/* 추가 안내문구, 여백 등은 필요시 확장 */
 
-/* 교실 섹션 스타일 */
-.classroom-section {
-    margin-bottom: 40px;
+/* 페이지 컨테이너 수정 - 네비게이션 바와 푸터를 고려 */
+.device-list-container {
+    padding: 10px 0;
+    width: 100%;
 }
 
-.classroom-section .classroom-header {
-    background-color: #2d3a4b;
-    color: #fff;
-    padding: 15px 20px;
-    border-radius: 10px 10px 0 0;
-    margin-bottom: 0;
+/* 반응형 스타일 조정 */
+@media (max-width: 1220px) {
+    .container {
+        width: 95%;
+        padding: 15px;
+    }
+    
+    .device-table {
+        display: block;
+        overflow-x: auto;
+    }
 }
 
-.classroom-section .classroom-header h3 {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 700;
-    color: #fff;
-}
-
-.classroom-section .device-table {
-    margin-top: 0;
-    border-top-left-radius: 0;
-    border-top-right-radius: 0;
-}
-
-/* 기존 classroom-header 스타일 수정 */
-.device-table tr.classroom-header {
-    background-color: #2d3a4b !important;
-    border-top: 1px solid #1a2533;
+@media (max-width: 768px) {
+    .footer-content {
+        flex-direction: column;
+    }
+    
+    .footer-links {
+        margin-left: 0;
+        margin-top: 1rem;
+    }
+    
+    .footer-links ul {
+        flex-direction: column;
+    }
+    
+    .container {
+        padding: 15px;
+        margin: 15px auto;
+    }
+    
+    .filter-container {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .filter-container .sub-but {
+        margin-left: 0;
+        margin-top: 10px;
+    }
 } 

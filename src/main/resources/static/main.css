@@ -12,6 +12,9 @@ body {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    font-size: 13px;
 }
 
 /* 네비게이션 바 스타일 */
@@ -22,15 +25,16 @@ body {
     background-color: #1e3a8a;
     color: white;
     padding: 0 2rem;
-    height: 60px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    height: 50px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     position: sticky;
     top: 0;
     z-index: 1000;
+    width: 100%;
 }
 
 .navbar-logo {
-    font-size: 1.5rem;
+    font-size: 1.3rem;
     font-weight: 700;
     color: white;
     text-decoration: none;
@@ -42,7 +46,7 @@ body {
 }
 
 .navbar-menu li {
-    margin-left: 2rem;
+    margin-left: 1.5rem;
 }
 
 .navbar-menu a {
@@ -50,6 +54,7 @@ body {
     text-decoration: none;
     font-weight: 500;
     transition: color 0.3s;
+    font-size: 0.9rem;
 }
 
 .navbar-menu a:hover {
@@ -59,7 +64,7 @@ body {
 /* 메인 콘텐츠 컨테이너 */
 .container {
     max-width: 1200px;
-    margin: 2rem auto;
+    margin: 1rem auto 2rem auto;
     padding: 0 1rem;
     flex: 1;
 }
@@ -68,21 +73,21 @@ body {
 .card-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 2rem;
-    margin-bottom: 2rem;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
 }
 
 .card-grid-bottom {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 2rem;
+    gap: 1.5rem;
 }
 
 .card {
     background-color: white;
-    border-radius: 10px;
+    border-radius: 8px;
     overflow: hidden;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 3px 5px rgba(0, 0, 0, 0.1);
     transition: transform 0.3s, box-shadow 0.3s;
     text-decoration: none;
     color: #333;
@@ -91,29 +96,30 @@ body {
     align-items: center;
     justify-content: center;
     text-align: center;
-    padding: 2rem;
-    min-height: 200px;
+    padding: 1.5rem;
+    min-height: 180px;
 }
 
 .card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.1);
 }
 
 .card-icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
+    font-size: 2.5rem;
+    margin-bottom: 0.8rem;
     color: #1e3a8a;
 }
 
 .card-title {
-    font-size: 1.5rem;
+    font-size: 1.3rem;
     font-weight: 700;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.3rem;
 }
 
 .card-description {
     color: #666;
+    font-size: 0.9rem;
 }
 
 .disabled {
@@ -123,24 +129,24 @@ body {
 
 .disabled:hover {
     transform: none;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 3px 5px rgba(0, 0, 0, 0.1);
 }
 
 /* 페이지 제목 */
 .page-title {
     text-align: center;
-    margin-bottom: 3rem;
+    margin-bottom: 2rem;
 }
 
 .page-title h1 {
-    font-size: 2.5rem;
+    font-size: 2rem;
     font-weight: 700;
     color: #1e3a8a;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.3rem;
 }
 
 .page-title p {
-    font-size: 1.2rem;
+    font-size: 1rem;
     color: #666;
 }
 
@@ -148,53 +154,58 @@ body {
 .footer {
     background-color: #f9f9f9;
     border-top: 1px solid #e5e5e5;
-    padding: 2rem 0;
+    padding: 1.5rem 0;
     color: #555;
-    margin-top: 2rem;
-    font-size: 0.9rem;
+    margin-top: auto;
+    font-size: 0.8rem;
+    width: 100%;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
 }
 
 .footer-container {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 0 1rem;
+    padding: 0 1.5rem;
 }
 
 .footer-logo {
     display: flex;
     flex-direction: column;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
 }
 
 .footer-logo strong {
-    font-size: 1.5rem;
+    font-size: 1.2rem;
     color: #1e3a8a;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.2rem;
 }
 
 .footer-logo span {
     color: #666;
+    font-size: 0.8rem;
 }
 
 .footer-content {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
     flex-wrap: wrap;
 }
 
 .footer-info {
     flex: 1;
-    min-width: 300px;
+    min-width: 250px;
 }
 
 .footer-info p {
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.3rem;
     color: #666;
+    font-size: 0.75rem;
+    line-height: 1.5;
 }
 
 .footer-links {
-    margin-left: 2rem;
+    margin-left: 1.5rem;
 }
 
 .footer-links ul {
@@ -204,8 +215,8 @@ body {
 }
 
 .footer-links li {
-    margin-right: 1.5rem;
-    margin-bottom: 0.5rem;
+    margin-right: 1rem;
+    margin-bottom: 0.3rem;
 }
 
 .footer-links a {
@@ -213,6 +224,7 @@ body {
     text-decoration: none;
     font-weight: 500;
     transition: color 0.3s;
+    font-size: 0.8rem;
 }
 
 .footer-links a:hover {
@@ -221,14 +233,14 @@ body {
 }
 
 .footer-copyright {
-    padding-top: 1.5rem;
+    padding-top: 1rem;
     border-top: 1px solid #e5e5e5;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     color: #888;
 }
 
 .footer-copyright p {
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.3rem;
 }
 
 @media (max-width: 768px) {
@@ -238,10 +250,35 @@ body {
     
     .footer-links {
         margin-left: 0;
-        margin-top: 1rem;
+        margin-top: 0.5rem;
     }
     
     .footer-links ul {
         flex-direction: column;
+    }
+    
+    .navbar {
+        padding: 0 1rem;
+        height: auto;
+        min-height: 50px;
+    }
+    
+    .navbar-menu {
+        gap: 0.8rem;
+        flex-wrap: wrap;
+        padding: 0.5rem 0;
+    }
+    
+    .navbar-menu li {
+        margin-left: 0;
+    }
+    
+    .container {
+        margin: 0.5rem auto 1.5rem auto;
+        padding: 0 0.5rem;
+    }
+    
+    .card-grid, .card-grid-bottom {
+        grid-template-columns: 1fr;
     }
 } 
