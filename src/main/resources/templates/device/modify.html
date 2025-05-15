@@ -1,11 +1,16 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <title>장비 수정</title>
     <link rel="stylesheet" href="/device.css" />
+    <link rel="stylesheet" href="/main.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
+    <!-- 네비게이션 바 포함 -->
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+    
     <div class="container">
         <div class="device-form-container">
             <div class="title">
@@ -161,5 +166,8 @@
             </div>
         </div>
     </div>
+    
+    <!-- 푸터 포함 -->
+    <div th:replace="~{fragments/footer :: footer}"></div>
 </body>
 </html> 

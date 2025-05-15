@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <nav th:fragment="navbar" class="navbar">
+        <a href="/" class="navbar-logo">I-NET</a>
+        <ul class="navbar-menu">
+            <li><a href="/device/list">장비목록</a></li>
+            <li><a href="/device/register">장비등록</a></li>
+            <li><a href="#" class="disabled">무선AP등록</a></li>
+            <li><a href="#" class="disabled">학교평면도</a></li>
+            <li><a href="#" class="disabled">제출용파일</a></li>
+        </ul>
+    </nav>
+</body>
+</html> 
