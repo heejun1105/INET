@@ -739,19 +739,34 @@ public class DeviceService {
                 
                 System.out.println("카테고리 '" + cate + "'의 장비 수: " + deviceList.size() + "개");
                 
-                // 현재 카테고리의 최대 ID 번호 조회
-                Long lastNumber = school != null 
-                    ? uidService.getLastIdNumberBySchool(cate, school) 
-                    : uidService.getLastIdNumber(cate);
-                
-                System.out.println("카테고리 '" + cate + "'의 마지막 ID 번호: " + lastNumber);
-                
-                // 각 장비에 순차적으로 ID 번호 부여
-                for (int i = 0; i < deviceList.size(); i++) {
-                    Long idNumber = lastNumber + i + 1;
-                    Device device = deviceList.get(i);
-                    setDeviceUidWithNumber(device, cate, idNumber);
-                    System.out.println("장비에 UID 설정: 카테고리=" + cate + ", ID번호=" + idNumber);
+                // 각 장비 처리
+                for (Device device : deviceList) {
+                    // 현재 연도의 뒤 두 자리 가져오기 (예: 2025 -> 25)
+                    int currentYear = LocalDate.now().getYear() % 100;
+                    
+                    // 제조일자가 있다면 해당 년도를 사용, 없으면 "xx" 사용
+                    String mfgYear = device.getPurchaseDate() != null ? 
+                            String.valueOf(device.getPurchaseDate().getYear() % 100) : 
+                            "xx";
+                    
+                    // 학교 PK를 2자리 문자열로 변환 (예: 2 -> "02")
+                    String schoolCode = String.format("%02d", school.getSchoolId());
+                    
+                    // 해당 카테고리, 학교, 제조년의 최대 ID 번호 조회
+                    Long lastNumber = uidService.getLastIdNumberBySchoolAndMfgYear(school, cate, mfgYear);
+                    
+                    // 새 ID 번호 계산
+                    Long idNumber = lastNumber + 1;
+                    
+                    // UID 생성 및 설정
+                    Uid uid = uidService.createUidWithMfgYear(cate, idNumber, mfgYear, school);
+                    device.setUid(uid);
+                    
+                    System.out.println("장비에 UID 설정: 카테고리=" + cate + 
+                            ", 학교코드=" + schoolCode + 
+                            ", 제조년=" + mfgYear + 
+                            ", ID번호=" + String.format("%04d", idNumber) + 
+                            " (표시: " + cate + schoolCode + mfgYear + String.format("%04d", idNumber) + ")");
                 }
             }
             
@@ -894,13 +909,22 @@ public class DeviceService {
         
         // 장비의 학교 정보 가져오기
         School school = device.getSchool();
+        
+        // 현재 연도의 뒤 두 자리 가져오기 (예: 2025 -> 25)
+        int currentYear = LocalDate.now().getYear() % 100;
+        
+        // 제조일자가 있다면 해당 년도를 사용, 없으면 "xx" 사용
+        String mfgYear = device.getPurchaseDate() != null ? 
+                String.valueOf(device.getPurchaseDate().getYear() % 100) : 
+                "xx";
+        
         Uid uid;
         
         if (school != null) {
             // 학교 정보가 있으면 학교별로 Uid 생성
-            uid = uidService.createNextUidWithSchool(cate, school);
+            uid = uidService.createNextUidWithMfgYear(cate, mfgYear, school);
         } else {
-            // 학교 정보가 없으면 기존 방식대로 Uid 생성
+            // 학교 정보가 없는 경우는 기존 방식대로 처리
             uid = uidService.createNextUid(cate);
         }
         
@@ -920,12 +944,21 @@ public class DeviceService {
         
         // 장비의 학교 정보 가져오기
         School school = device.getSchool();
+        
+        // 현재 연도의 뒤 두 자리 가져오기 (예: 2025 -> 25)
+        int currentYear = LocalDate.now().getYear() % 100;
+        
+        // 제조일자가 있다면 해당 년도를 사용, 없으면 "xx" 사용
+        String mfgYear = device.getPurchaseDate() != null ? 
+                String.valueOf(device.getPurchaseDate().getYear() % 100) : 
+                "xx";
+        
         Uid uid;
         
         if (school != null) {
             // 학교별로 Uid 조회 또는 생성
-            uid = uidService.findBySchoolAndCateAndIdNumber(school, cate, idNumber)
-                    .orElseGet(() -> uidService.createUidWithSchool(cate, idNumber, school));
+            uid = uidService.findBySchoolAndCateAndMfgYearAndIdNumber(school, cate, mfgYear, idNumber)
+                    .orElseGet(() -> uidService.createUidWithMfgYear(cate, idNumber, mfgYear, school));
         } else {
             // 학교 정보가 없으면 기존 방식대로 처리
             uid = uidService.getUidByCateAndIdNumber(cate, idNumber)

@@ -182,6 +182,18 @@ input:focus, textarea:focus, select:focus {
     white-space: nowrap;
 }
 
+/* 고유번호 컬럼 스타일 - 글씨 크기 작게 */
+.device-table td:nth-child(2) {
+    font-size: 10px;
+    font-family: 'Consolas', monospace;
+    letter-spacing: -0.5px;
+}
+
+.device-table td:nth-child(7) {
+    font-size: 10px;
+    letter-spacing: -0.3px;
+}
+
 /* IP 주소 컬럼 스타일 - 줄바꿈 안되게 */
 .device-table th:nth-child(10), .device-table td:nth-child(10) {
     white-space: nowrap;

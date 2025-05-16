@@ -32,6 +32,9 @@ public class Uid {
     @Column(name = "id_number")
     private Long idNumber;
 
+    @Column(name = "mfg_year")
+    private String mfgYear;
+
     @ManyToOne
     @JoinColumn(name = "school_id")
     private School school;

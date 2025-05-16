@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.LocalDate;
 
 @Service
 @Transactional
@@ -196,8 +197,9 @@ public class UidService {
     }
 
     /**
-     * 학교별 Uid 목록 조회
+     * 학교와 카테고리로 Uid 목록 조회
      * @param school 학교
+     * @param cate 카테고리
      * @return Uid 목록
      */
     public List<Uid> getUidsBySchool(School school) {
@@ -223,5 +225,78 @@ public class UidService {
      */
     public Optional<Uid> findBySchoolAndCateAndIdNumber(School school, String cate, Long idNumber) {
         return uidRepository.findBySchoolAndCateAndIdNumber(school, cate, idNumber);
+    }
+
+    /**
+     * 제조년을 포함한 새로운 Uid 생성
+     * @param cate 카테고리
+     * @param idNumber ID 번호
+     * @param mfgYear 제조년 (2자리)
+     * @param school 학교
+     * @return 생성된 Uid 객체
+     */
+    public Uid createUidWithMfgYear(String cate, Long idNumber, String mfgYear, School school) {
+        log.info("Creating Uid with cate: {}, idNumber: {}, mfgYear: {}, school: {}", 
+                cate, idNumber, mfgYear, school.getSchoolName());
+        
+        Uid uid = new Uid();
+        uid.setCate(cate);
+        uid.setIdNumber(idNumber);
+        uid.setMfgYear(mfgYear);
+        uid.setSchool(school);
+        
+        return uidRepository.save(uid);
+    }
+
+    /**
+     * 제조년을 포함한 다음 ID 번호 생성
+     * @param cate 카테고리
+     * @param mfgYear 제조년 (2자리)
+     * @param school 학교
+     * @return 생성된 Uid 객체
+     */
+    public Uid createNextUidWithMfgYear(String cate, String mfgYear, School school) {
+        log.info("Creating next Uid for cate: {}, mfgYear: {}, school: {}", 
+                cate, mfgYear, school.getSchoolName());
+        
+        // 해당 카테고리, 제조년, 학교의 최대 idNumber 조회
+        Long nextIdNumber = uidRepository.findTopBySchoolAndCateAndMfgYearOrderByIdNumberDesc(school, cate, mfgYear)
+                .map(uid -> uid.getIdNumber() + 1)
+                .orElse(1L); // 없으면 1부터 시작
+        
+        return createUidWithMfgYear(cate, nextIdNumber, mfgYear, school);
+    }
+
+    /**
+     * 학교, 카테고리, 제조년, ID 번호로 Uid 조회
+     * @param school 학교
+     * @param cate 카테고리
+     * @param mfgYear 제조년 (2자리)
+     * @param idNumber ID 번호
+     * @return Uid 객체 (Optional)
+     */
+    public Optional<Uid> findBySchoolAndCateAndMfgYearAndIdNumber(School school, String cate, String mfgYear, Long idNumber) {
+        return uidRepository.findBySchoolAndCateAndMfgYearAndIdNumber(school, cate, mfgYear, idNumber);
+    }
+
+    /**
+     * 특정 학교, 카테고리, 제조년으로 마지막 ID 번호 조회
+     * @param school 학교
+     * @param cate 카테고리
+     * @param mfgYear 제조년 (2자리)
+     * @return 마지막 ID 번호 (없으면 0)
+     */
+    public Long getLastIdNumberBySchoolAndMfgYear(School school, String cate, String mfgYear) {
+        return uidRepository.findTopBySchoolAndCateAndMfgYearOrderByIdNumberDesc(school, cate, mfgYear)
+                .map(uid -> uid.getIdNumber())
+                .orElse(0L);
+    }
+
+    /**
+     * 현재 연도에서 2자리 연도 추출 (예: 2025 -> 25)
+     * @return 2자리 연도
+     */
+    public String getCurrentTwoDigitYear() {
+        return String.valueOf(LocalDate.now().getYear() % 100);
     }
 } 

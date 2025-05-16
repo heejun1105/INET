@@ -103,7 +103,14 @@
                             <!-- 장비 데이터 행 -->
                             <tr th:class="${device.setType != null && device.setType != '' ? 'set-group-item group-item' : (device.operator != null && device.operator.name != null ? 'operator-group-item group-item' : 'group-item')}">
                                 <td th:text="${device.school != null && device.school.schoolName != null ? device.school.schoolName : ''}"></td>
-                                <td th:text="${device.uid != null ? device.uid.cate + device.uid.idNumber : ''}"></td>
+                                <td>
+                                    <span th:if="${device.uid != null}" th:with="
+                                        cate=${device.uid.cate},
+                                        schoolCode=${device.school != null ? #numbers.formatInteger(device.school.schoolId, 2) : '00'},
+                                        mfgYear=${device.uid.mfgYear != null ? device.uid.mfgYear : 'xx'},
+                                        idNumber=${device.uid.idNumber != null ? #numbers.formatInteger(device.uid.idNumber, 4) : '0000'}"
+                                        th:text="${cate + schoolCode + mfgYear + idNumber}"></span>
+                                </td>
                                 <td th:text="${device.manage != null ? (device.manage.manageCate != null ? device.manage.manageCate : '') + (device.manage.year != null ? '-' + device.manage.year : '') + (device.manage.manageNum != null ? '-' + device.manage.manageNum : '') : ''}"></td>
                                 <td class="device-type" th:text="${device.type != null ? device.type : ''}"></td>
                                 <td th:text="${device.operator != null && device.operator.position != null ? device.operator.position : ''}"></td>

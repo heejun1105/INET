@@ -35,4 +35,10 @@ public interface UidRepository extends JpaRepository<Uid, Long> {
     
     // 학교, 카테고리, ID 번호로 Uid 검색
     Optional<Uid> findBySchoolAndCateAndIdNumber(School school, String cate, Long idNumber);
+
+    // 학교, 카테고리, 제조년으로 최대 ID 번호 조회
+    Optional<Uid> findTopBySchoolAndCateAndMfgYearOrderByIdNumberDesc(School school, String cate, String mfgYear);
+    
+    // 학교, 카테고리, 제조년, ID 번호로 Uid 검색
+    Optional<Uid> findBySchoolAndCateAndMfgYearAndIdNumber(School school, String cate, String mfgYear, Long idNumber);
 } 
